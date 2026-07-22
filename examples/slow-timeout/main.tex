@@ -1,0 +1,10 @@
+\documentclass{article}
+\begin{document}
+% Documento propositalmente lento (muitas iterações) para testes de timeout.
+\newcount\n
+\n=0
+\loop
+  \advance\n by 1
+  x%
+\ifnum\n<500000\repeat
+\end{document}

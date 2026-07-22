@@ -1,0 +1,46 @@
+# Python
+backend/.venv/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/.pytest_cache/
+backend/test-studio.db
+*.egg-info/
+
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# LaTeX build
+**/.latex-local/
+*.aux
+*.log
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.bcf
+*.blg
+*.run.xml
+*.toc
+*.out
+
+# OS / IDE
+.DS_Store
+.env
+.idea/
+.vscode/
+*.swp
+
+# App data
+.latex-studio-local/
+
+# Runtime PIDs/logs
+.runtime/
+
+# AI keys (never commit)
+ai-settings.json
+**/ai-settings.json
+
+# Conteúdo pessoal de trabalho (não versionar)
+MEU livro/

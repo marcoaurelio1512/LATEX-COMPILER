@@ -1,0 +1,8 @@
+{
+  "main_file": "main.tex",
+  "engine": "lualatex",
+  "bibliography": "auto",
+  "auto_compile": true,
+  "synctex": true,
+  "compiler_mode": "native"
+}

@@ -1,0 +1,17 @@
+{
+  "name": "latex-studio-local",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Overleaf local simplificado \u2014 edi\u00e7\u00e3o e compila\u00e7\u00e3o LaTeX no seu computador",
+  "scripts": {
+    "dev": "./scripts/dev.sh",
+    "setup": "./scripts/setup-macos.sh",
+    "test": "cd backend && .venv/bin/pytest -q",
+    "check-deps": "./scripts/check-dependencies.sh",
+    "build-compiler": "./scripts/build-compiler-image.sh",
+    "iniciar": "./scripts/iniciar.sh",
+    "parar": "./scripts/parar.sh",
+    "start": "./scripts/iniciar.sh",
+    "stop": "./scripts/parar.sh"
+  }
+}
