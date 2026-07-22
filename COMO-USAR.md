@@ -190,6 +190,141 @@ Se estiver vazio: ainda não compilou, ou a compilação falhou.
 
 ---
 
+## Como montar a pasta de um livro (para conseguir compilar)
+
+O LaTeX **não trabalha com um arquivo solto** como um `.docx`.  
+Ele trabalha com uma **pasta de projeto**. Dentro dela ficam o arquivo principal, os capítulos, as imagens e a bibliografia.
+
+### Estrutura recomendada (copie e adapte)
+
+No Finder, organize assim:
+
+```text
+meu-livro/
+├── main.tex                 ← arquivo PRINCIPAL (é este que se compila)
+├── referencias.bib          ← fichas bibliográficas (opcional, mas comum)
+├── .latex-local.json        ← o Studio cria/atualiza sozinho (pode ignorar)
+├── capitulos/
+│   ├── 01-introducao.tex
+│   ├── 02-fundamentos.tex
+│   ├── 03-metodo.tex
+│   └── 99-conclusao.tex
+├── figuras/
+│   ├── diagrama.png
+│   └── capa.jpg
+└── anexos/                  ← opcional
+    └── tabela-extra.tex
+```
+
+### O que cada coisa faz
+
+| Item | Para que serve |
+|------|----------------|
+| `main.tex` | “Capa” do livro: título, pacotes, sumário e a ordem dos capítulos |
+| `capitulos/*.tex` | Texto de cada capítulo (não precisam ter `\documentclass` sozinhos) |
+| `referencias.bib` | Lista de livros/artigos citados (`@book{...}`, `@article{...}`) |
+| `figuras/` | Imagens usadas com `\includegraphics{...}` |
+| `.latex-local.json` | Lembra qual é o arquivo principal e as opções de compilação |
+
+### Regra de ouro
+
+> Só o `main.tex` tem `\documentclass{...}` e `\begin{document}` … `\end{document}`.  
+> Os capítulos são **pedaços** incluídos pelo principal.
+
+### Exemplo mínimo de `main.tex` (livro)
+
+```tex
+\documentclass[12pt,a4paper,openany]{book}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazilian]{babel}
+\usepackage{graphicx}
+\usepackage[backend=biber,style=authoryear]{biblatex}
+\addbibresource{referencias.bib}
+
+\graphicspath{{figuras/}}
+
+\title{Título do meu livro}
+\author{Seu nome}
+\date{\today}
+
+\begin{document}
+\frontmatter
+\maketitle
+\tableofcontents
+
+\mainmatter
+\input{capitulos/01-introducao}
+\input{capitulos/02-fundamentos}
+\input{capitulos/03-metodo}
+\input{capitulos/99-conclusao}
+
+\printbibliography
+\end{document}
+```
+
+### Exemplo de um capítulo (`capitulos/01-introducao.tex`)
+
+```tex
+\chapter{Introdução}
+
+Texto do capítulo...
+
+Como cita um autor: \cite{silva2020}.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.8\linewidth]{diagrama.png}
+  \caption{Exemplo de figura.}
+\end{figure}
+```
+
+### Exemplo curto de `referencias.bib`
+
+```bib
+@book{silva2020,
+  author    = {Silva, Maria},
+  title     = {Produção intelectual e tecnologia},
+  publisher = {Editora Exemplo},
+  year      = {2020},
+  address   = {São Paulo}
+}
+```
+
+### Como abrir e compilar essa pasta no Studio
+
+1. Ligue o Studio (`INICIAR.command`)
+2. Na tela inicial, use **Abrir pasta do projeto** (ou **Escolher pasta…**)
+3. Selecione a pasta `meu-livro` (a pasta inteira, não só um capítulo)
+4. Na coluna da esquerda, confirme que aparece `main.tex`, `capitulos/`, etc.
+5. Abra o `main.tex`
+6. Se ainda não estiver marcado, clique em **Usar na compilação** (arquivo principal)
+7. Clique em **Compilar**
+8. O PDF do livro deve aparecer à direita
+
+### Dicas práticas (evitam 90% dos erros)
+
+1. **Nomes de arquivo:** evite espaços e acentos nos nomes (`01-introducao.tex`, não `Capítulo 1.tex`)
+2. **Caminhos:** no LaTeX use barra `/` (`capitulos/01-introducao`, `figuras/diagrama.png`)
+3. **Bibliografia:** se usar `biblatex` + Biber, deixe a opção de bibliografia em **auto** (padrão do Studio)
+4. **Compile o principal:** se você abrir só um capítulo e tentar compilá-lo sozinho, costuma falhar — compile o `main.tex`
+5. **Exemplo pronto no projeto:** abra a pasta  
+   `examples/book`  
+   para ver um livro mínimo funcionando
+
+### Versão ainda mais simples (tudo em um arquivo)
+
+Se o livro for curto, pode ter só:
+
+```text
+meu-livro/
+└── main.tex
+```
+
+Funciona. Quando crescer, aí você separa em `capitulos/`.
+
+---
+
 ## Fluxo simples (o que fazer na prática)
 
 ### 1) Abrir um exemplo (melhor teste)
@@ -371,6 +506,7 @@ Também usa Pandoc se estiver instalado; senão, conversor interno básico.
 - [ ] Abri a pasta `examples/article`
 - [ ] Cliquei em **Compilar**
 - [ ] Vi o PDF à direita
+- [ ] (Opcional) Abri `examples/book` ou montei minha pasta no modelo da seção “Como montar a pasta de um livro”
 - [ ] Quando terminei, cliquei em `PARAR.command`
 
 ---

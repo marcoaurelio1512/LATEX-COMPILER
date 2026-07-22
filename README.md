@@ -7,23 +7,45 @@
 
 Overleaf local simplificado: edite, compile e visualize projetos LaTeX **inteiramente no seu computador**.
 
-**Todos os arquivos permanecem no computador do usuário.**
-
-Não há conta, nuvem, telemetria, analytics nem envio de documentos para APIs externas.
+**Por padrão, arquivos do projeto permanecem no seu Mac.**  
+A única exceção opcional é o **Assistente de IA**: se você cadastrar uma chave OpenAI-compatible, o texto do chat é enviado à LLM configurada.
 
 ## Recursos
 
+### Editor e projetos
 - Abrir/criar projetos locais (seletor nativo no macOS)
+- Abrir pasta **ou** arquivo `.tex` / `.md` (o Studio carrega a pasta do arquivo)
 - Árvore de arquivos com criar/renomear/excluir
-- Editor Monaco (LaTeX/BibTeX) com abas
+- Editor Monaco (LaTeX / BibTeX / Markdown) com abas
+- Salvar, **Salvar como…** e **Baixar** o arquivo atual
+- Definir arquivo principal (**Usar na compilação**)
+
+### Compilação e PDF
 - Compilação via `latexmk` (LuaLaTeX padrão, XeLaTeX, PDFLaTeX)
-- Biber/BibTeX conforme o documento
-- Preview PDF embutido
+- Biber/BibTeX conforme o documento (`bibliography: auto`)
+- Preview PDF embutido (blob inline, sem download forçado)
 - Logs e diagnósticos (arquivo + linha) clicáveis
-- Compilação automática ao salvar
+- Compilação automática ao salvar (opcional)
 - Watchdog para alterações externas
 - Modo nativo ou Docker isolado (`--network none`, sem root, sem shell-escape)
 - Metadados em SQLite local (`~/.latex-studio-local/`)
+
+### Markdown ↔ LaTeX
+- **MD → TeX (salvar):** converte Markdown em `.tex` (Pandoc se disponível; conversor interno como fallback)
+- **TeX → MD:** gera Markdown a partir de um `.tex`
+- Após MD → TeX, o `.tex` gerado pode ser definido automaticamente como arquivo principal
+
+### Assistente de IA (opcional)
+- Painel **Assistente IA** no workspace
+- Chave no padrão OpenAI-compatible (`base_url` + `model` + `api_key`)
+- Chave armazenada só no Mac (`~/.latex-studio-local/ai-settings.json`, permissão restrita)
+- Conversas com resposta em **Markdown**
+- **Salvar .md** ou **Salvar .md → .tex** (converte e pode marcar como principal)
+- Contexto opcional do arquivo aberto no editor
+
+### Documentação
+- Guia para leigos com estrutura de pasta de **livro** (`.tex`, `.bib`, capítulos, figuras): [COMO-USAR.md](COMO-USAR.md)
+- Exemplo mínimo de livro em `examples/book`
 
 ## Requisitos (macOS)
 
@@ -34,6 +56,9 @@ brew install --cask mactex-no-gui
 
 # Node + Python já devem estar instalados
 node -v && python3 --version
+
+# Opcional (melhor conversão MD↔TeX)
+brew install pandoc
 ```
 
 Guia detalhado: [docs/macos-install.md](docs/macos-install.md)
@@ -100,12 +125,26 @@ Em `examples/`:
 | Pasta | Propósito |
 |-------|-----------|
 | `article` | Artigo válido |
-| `book` | Livro válido |
+| `book` | Livro válido (com capítulos via `\input`) |
 | `error-undefined` | Comando inexistente |
 | `error-missing-image` | Imagem ausente |
 | `error-missing-ref` | Referência ausente |
 | `error-bibtex` / `error-biber` | Bibliografia |
 | `slow-timeout` | Teste de timeout |
+
+## Pasta típica de um livro
+
+```text
+meu-livro/
+├── main.tex              # arquivo principal (compilar este)
+├── referencias.bib
+├── capitulos/
+│   ├── 01-introducao.tex
+│   └── ...
+└── figuras/
+```
+
+Detalhes e exemplos de código: seção **“Como montar a pasta de um livro”** em [COMO-USAR.md](COMO-USAR.md).
 
 ## Testes
 
@@ -150,6 +189,7 @@ Saída de compilação: `<projeto>/.latex-local/build/`
 - Extensões e tamanhos limitados
 - Timeout configurável (padrão 120s)
 - Cancelamento de processo + grupo
+- Chave de IA nunca é commitada (fica fora do repositório)
 
 ## SyncTeX
 
@@ -157,7 +197,11 @@ Arquitetura preparada; sincronização bidirecional completa fica para evoluçã
 
 ## IA
 
-Não há integração com IA nesta versão. Existe apenas `DiagnosticAssistant` com sugestões determinísticas locais. Nenhum conteúdo é enviado a modelos remotos.
+Há integração **opcional** com LLMs no padrão OpenAI (`/v1/chat/completions`).
+
+- Desligada por padrão até cadastrar a chave no painel **Assistente IA**
+- Sugestões de erro de compilação continuam locais (`DiagnosticAssistant` determinístico)
+- Com a IA ativa, o conteúdo do chat (e trechos de contexto, se habilitados) é enviado ao provedor configurado
 
 ## Licença
 
