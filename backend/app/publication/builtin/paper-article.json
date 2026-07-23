@@ -1,0 +1,20 @@
+{
+  "id": "paper-article",
+  "name": "Article padrão",
+  "description": "Paper genérico com classe article.",
+  "project_types": [
+    "paper"
+  ],
+  "document_class": "article",
+  "class_options": [
+    "11pt",
+    "a4paper"
+  ],
+  "engine": "pdflatex",
+  "bibliography": "biber",
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "validated": true,
+  "warnings": []
+}

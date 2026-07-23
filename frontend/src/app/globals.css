@@ -20,3 +20,14 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* Destaque amarelo da busca (Procurar) */
+.ls-find-match {
+  background-color: rgba(250, 204, 21, 0.4) !important;
+}
+.ls-find-match-current {
+  background-color: #facc15 !important;
+  color: #18181b !important;
+  font-weight: 600;
+  border-radius: 2px;
+}

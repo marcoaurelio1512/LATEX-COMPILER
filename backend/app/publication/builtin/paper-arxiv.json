@@ -1,0 +1,23 @@
+{
+  "id": "paper-arxiv",
+  "name": "arXiv / preprint",
+  "description": "Preprint limpo (article) adequado para depósito no arXiv.",
+  "project_types": [
+    "paper"
+  ],
+  "document_class": "article",
+  "class_options": [
+    "11pt"
+  ],
+  "engine": "pdflatex",
+  "bibliography": "bibtex",
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "packages": [
+    "graphicx",
+    "hyperref"
+  ],
+  "validated": true,
+  "warnings": []
+}

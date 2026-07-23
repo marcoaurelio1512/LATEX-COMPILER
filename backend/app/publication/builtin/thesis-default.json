@@ -1,0 +1,22 @@
+{
+  "id": "thesis-default",
+  "name": "Tese padrão",
+  "description": "Tese/dissertação baseada em book com frontmatter acadêmico.",
+  "project_types": [
+    "thesis",
+    "dissertation"
+  ],
+  "document_class": "book",
+  "class_options": [
+    "12pt",
+    "a4paper",
+    "openany"
+  ],
+  "engine": "lualatex",
+  "bibliography": "biber",
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "validated": true,
+  "warnings": []
+}

@@ -1,0 +1,17 @@
+{
+  "id": "paper-springer-lncs",
+  "name": "Springer LNCS",
+  "description": "Esqueleto LNCS (llncs). Importe o ZIP oficial se a classe não estiver no TeX Live.",
+  "project_types": [
+    "paper"
+  ],
+  "document_class": "llncs",
+  "class_options": [],
+  "engine": "pdflatex",
+  "bibliography": "bibtex",
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "validated": true,
+  "warnings": []
+}

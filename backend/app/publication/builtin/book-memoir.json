@@ -1,0 +1,24 @@
+{
+  "id": "book-memoir",
+  "name": "Memoir",
+  "description": "Livro com classe memoir.",
+  "project_types": [
+    "book"
+  ],
+  "document_class": "memoir",
+  "class_options": [
+    "12pt",
+    "a4paper"
+  ],
+  "engine": "lualatex",
+  "bibliography": "biber",
+  "packages": [
+    "graphicx",
+    "biblatex"
+  ],
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "validated": true,
+  "warnings": []
+}

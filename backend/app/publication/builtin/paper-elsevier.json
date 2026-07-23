@@ -1,0 +1,20 @@
+{
+  "id": "paper-elsevier",
+  "name": "Elsevier",
+  "description": "Esqueleto elsarticle.",
+  "project_types": [
+    "paper"
+  ],
+  "document_class": "elsarticle",
+  "class_options": [
+    "preprint",
+    "12pt"
+  ],
+  "engine": "pdflatex",
+  "bibliography": "bibtex",
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "validated": true,
+  "warnings": []
+}

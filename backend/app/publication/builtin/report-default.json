@@ -1,0 +1,20 @@
+{
+  "id": "report-default",
+  "name": "Relatório técnico",
+  "description": "Relatório com classe report.",
+  "project_types": [
+    "report"
+  ],
+  "document_class": "report",
+  "class_options": [
+    "11pt",
+    "a4paper"
+  ],
+  "engine": "pdflatex",
+  "bibliography": "biber",
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "validated": true,
+  "warnings": []
+}

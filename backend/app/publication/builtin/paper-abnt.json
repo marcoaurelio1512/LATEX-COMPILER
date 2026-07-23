@@ -1,0 +1,20 @@
+{
+  "id": "paper-abnt",
+  "name": "ABNT",
+  "description": "Artigo com abntex2 (normas ABNT).",
+  "project_types": [
+    "paper",
+    "monograph",
+    "thesis",
+    "dissertation"
+  ],
+  "document_class": "abntex2",
+  "class_options": [],
+  "engine": "pdflatex",
+  "bibliography": "bibtex",
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "validated": true,
+  "warnings": []
+}

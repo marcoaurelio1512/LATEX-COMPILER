@@ -26,6 +26,13 @@ SUGGESTIONS = {
     "BIBER_ERROR": (
         "Verifique o arquivo .bib e a configuração do Biber."
     ),
+    "SHELL_ESCAPE": (
+        "Aviso de segurança esperado no Studio (shell-escape desligado). "
+        "Pode ignorar."
+    ),
+    "LATEX_RERUN": (
+        "O LaTeX pede outra passagem. Clique em Limpar e compilar."
+    ),
 }
 
 

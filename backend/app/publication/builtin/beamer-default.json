@@ -1,0 +1,17 @@
+{
+  "id": "beamer-default",
+  "name": "Apresentação Beamer",
+  "description": "Slides Beamer.",
+  "project_types": [
+    "beamer"
+  ],
+  "document_class": "beamer",
+  "class_options": [],
+  "engine": "pdflatex",
+  "bibliography": "none",
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "validated": true,
+  "warnings": []
+}

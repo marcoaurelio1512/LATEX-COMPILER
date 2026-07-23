@@ -122,6 +122,34 @@ export function AiAssistant(props: Props) {
     }
   }
 
+  async function saveBibFromReply() {
+    if (!lastAssistant.trim()) {
+      props.onError("Ainda não há resposta da IA para gerar .bib.");
+      return;
+    }
+    const chosen = window.prompt(
+      "Salvar bibliografia como (caminho .bib):",
+      "referencias.bib",
+    );
+    if (chosen === null) return;
+    const path = chosen.trim() || "referencias.bib";
+    if (!path.toLowerCase().endsWith(".bib")) {
+      props.onError("O caminho precisa terminar com .bib");
+      return;
+    }
+    try {
+      const result = await api.mdToBib(props.projectId, {
+        content: lastAssistant,
+        output_path: path,
+        append: true,
+      });
+      props.onInfo(result.message);
+      props.onSaved({ mdPath: result.output_path, texPath: null });
+    } catch (e) {
+      props.onError(e instanceof Error ? e.message : "Falha ao gerar .bib");
+    }
+  }
+
   async function saveReply(opts: {
     convertToTex: boolean;
     setAsMain: boolean;
@@ -254,7 +282,7 @@ export function AiAssistant(props: Props) {
         {messages.length === 0 && (
           <div className="rounded-lg border border-dashed border-zinc-700 p-3 text-xs text-zinc-400">
             Peça um capítulo, seção ou rascunho. A IA responde em Markdown.
-            Depois use <strong>Salvar .md</strong> ou{" "}
+            Depois use <strong>Salvar .md</strong>, <strong>.tex</strong> ou <strong>.bib</strong>. Ou{" "}
             <strong>Salvar .md → .tex</strong>.
           </div>
         )}
@@ -330,6 +358,15 @@ export function AiAssistant(props: Props) {
             title="Salva .md, converte para .tex e define como principal"
           >
             Salvar .md → .tex
+          </button>
+          <button
+            type="button"
+            disabled={!lastAssistant || busy}
+            onClick={() => void saveBibFromReply()}
+            className="rounded border border-amber-500/50 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-100 hover:bg-amber-500/20 disabled:opacity-50"
+            title="Extrai referências da resposta e gera um .bib"
+          >
+            Salvar .md → .bib
           </button>
           <button
             type="button"

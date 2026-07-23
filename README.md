@@ -1,6 +1,8 @@
 # LaTeX Studio Local
 
-> **Começando agora?** Leia o guia para leigos: [COMO-USAR.md](COMO-USAR.md)
+> **Começando agora?** Manual completo: [MANUAL-USO.md](MANUAL-USO.md) (também no botão **Como usar** do app)
+>
+> Resumo curto: [COMO-USAR.md](COMO-USAR.md)
 >
 > **Replicar em outro Mac?** Veja a lista completa: [REQUISITOS-INSTALACAO.md](REQUISITOS-INSTALACAO.md) — explicação simples de ligar, abrir projeto, compilar e ver o PDF.
 
@@ -13,27 +15,44 @@ A única exceção opcional é o **Assistente de IA**: se você cadastrar uma ch
 ## Recursos
 
 ### Editor e projetos
-- Abrir/criar projetos locais (seletor nativo no macOS)
+- Abrir/criar projetos locais (seletor nativo no macOS; diálogo na tela do navegador padrão)
 - Abrir pasta **ou** arquivo `.tex` / `.md` (o Studio carrega a pasta do arquivo)
-- Árvore de arquivos com criar/renomear/excluir
+- Árvore de arquivos: criar, renomear e **excluir**; **preview** ao clicar em imagens (png/jpg/gif/svg/webp)
 - Editor Monaco (LaTeX / BibTeX / Markdown) com abas
+- Barra superior **agrupada por função** (Arquivo · Edição · Converter · Compilar · Painéis)
 - Salvar, **Salvar como…** e **Baixar** o arquivo atual
 - Definir arquivo principal (**Usar na compilação**)
+- **Procurar** texto no arquivo aberto ou em todo o projeto (⌘/Ctrl+F)
+- **Inserir Figura** / **Inserir Citação**: miniaturas; citação no formato `(\cite{chave})`; auto `graphicx`/`biblatex`/`babel` (brasileiro → rótulo **Figura**)
+
+### Templates de publicação
+- Wizard em **2 passos** ao criar projeto: **tipo** → **template**
+- Tipos: Livro, Paper científico, Tese, Dissertação, Monografia, Relatório técnico, Beamer, Personalizado
+- Templates nativos: Book / Memoir / KOMA, IEEE, ACM, Springer LNCS, Elsevier, Nature, MDPI, arXiv, ABNT, Beamer e outros
+- Importar template oficial de revista/editora via **pasta** (ZIP descompactado) com `.cls`, `.sty`, `.bst`, logos, etc.
+- Separação clara: **conteúdo** (`content/`) · **template** (`templates/`) · **configuração** (`metadata.json`, `.latex-local.json`) · **compilação**
+- Camada de compatibilidade (`studio-compat.sty`): macros como `\DocumentTitle`, `\DocumentAuthor` — o texto não depende da classe IEEE/Nature/etc.
+- Painel **Templates** no workspace: listar, validar, importar, remover importados e **trocar template** sem apagar o conteúdo
+- Cache de análise em `~/.latex-studio-local/` ao importar
 
 ### Compilação e PDF
-- Compilação via `latexmk` (LuaLaTeX padrão, XeLaTeX, PDFLaTeX)
-- Biber/BibTeX conforme o documento (`bibliography: auto`)
-- Preview PDF embutido (blob inline, sem download forçado)
-- Logs e diagnósticos (arquivo + linha) clicáveis
+- Compilação via `latexmk` (LuaLaTeX, XeLaTeX, PDFLaTeX conforme o template/projeto)
+- Biber/BibTeX conforme o documento; `BIBINPUTS`/`TEXINPUTS` na raiz (capítulos em subpastas)
+- **Compilar gera o documento completo em PDF** quando o arquivo principal inclui a árvore (capítulos, figuras, `.bib`)
+- Preview PDF embutido; **Visualizar Full** em overlay na mesma página
+- Diagnósticos a partir do **log final** (evita falsos “Citation undefined” / “rerun Biber” de passagens intermediárias)
+- **Copiar problemas** na aba Problemas
 - Compilação automática ao salvar (opcional)
 - Watchdog para alterações externas
 - Modo nativo ou Docker isolado (`--network none`, sem root, sem shell-escape)
 - Metadados em SQLite local (`~/.latex-studio-local/`)
 
-### Markdown ↔ LaTeX
-- **MD → TeX (salvar):** converte Markdown em `.tex` (Pandoc se disponível; conversor interno como fallback)
+### Markdown ↔ LaTeX e bibliografia
+- **MD → TeX:** converte Markdown em `.tex` (Pandoc se disponível; fallback interno)
+- **MD → .bib:** extrai referências com escolha de perfil (**biblatex** / **bibtex** / **abnt**)
+- **.bib → formato:** reconverte um `.bib` entre esses perfis
 - **TeX → MD:** gera Markdown a partir de um `.tex`
-- Após MD → TeX, o `.tex` gerado pode ser definido automaticamente como arquivo principal
+- Após MD → TeX, o `.tex` gerado pode ser definido como arquivo principal
 
 ### Assistente de IA (opcional)
 - Painel **Assistente IA** no workspace
@@ -42,9 +61,11 @@ A única exceção opcional é o **Assistente de IA**: se você cadastrar uma ch
 - Conversas com resposta em **Markdown**
 - **Salvar .md** ou **Salvar .md → .tex** (converte e pode marcar como principal)
 - Contexto opcional do arquivo aberto no editor
+- **Traduzir projeto → EN:** traduz `.tex`/`.md`/`.bib`/`.txt` PT→EN via LLM, com backup em `.latex-local/translate-backup/`
 
 ### Documentação
-- Guia para leigos com estrutura de pasta de **livro** (`.tex`, `.bib`, capítulos, figuras): [COMO-USAR.md](COMO-USAR.md)
+- Manual completo para estudantes: [MANUAL-USO.md](MANUAL-USO.md)
+- Resumo: [COMO-USAR.md](COMO-USAR.md)
 - Exemplo mínimo de livro em `examples/book`
 
 ## Requisitos (macOS)
@@ -68,7 +89,7 @@ Guia detalhado: [docs/macos-install.md](docs/macos-install.md)
 
 No Finder, dê dois cliques em:
 
-- `INICIAR.command` — sobe API (8000) e App (3000) em segundo plano
+- `INICIAR.command` — sobe API (8000) e App (3000), abre o **navegador padrão** em **página inteira**
 - `PARAR.command` — encerra os servidores
 
 Pelo terminal:
@@ -132,19 +153,45 @@ Em `examples/`:
 | `error-bibtex` / `error-biber` | Bibliografia |
 | `slow-timeout` | Teste de timeout |
 
-## Pasta típica de um livro
+## Pasta típica (projeto de publicação)
+
+Projetos criados pelo wizard de templates:
+
+```text
+MeuProjeto/
+├── main.tex                 # wrapper (classe do template) — COMPILE ESTE
+├── metadata.json            # tipo, template, engine, bibliografia
+├── studio-compat.sty        # macros \DocumentTitle, \DocumentAuthor…
+├── .latex-local.json
+├── content/
+│   ├── frontmatter.tex
+│   ├── chapters/            # (ou body.tex / slides.tex)
+│   ├── figures/
+│   └── tables/
+├── references/
+│   └── references.bib
+├── templates/<id>/          # .cls/.sty do template + cópia do compat
+├── config/
+├── build/
+├── output/
+└── logs/
+```
+
+Ao clicar em **Compilar**, o Studio roda `latexmk` no `main.tex`. Esse arquivo inclui frontmatter, capítulos e bibliografia — o PDF gerado é o **documento completo** (livro/paper inteiro), não um capítulo isolado.
+
+Detalhes passo a passo: [COMO-USAR.md](COMO-USAR.md).
+
+## Pasta clássica de livro (também suportada)
 
 ```text
 meu-livro/
-├── main.tex              # arquivo principal (compilar este)
+├── main.tex
 ├── referencias.bib
 ├── capitulos/
 │   ├── 01-introducao.tex
 │   └── ...
 └── figuras/
 ```
-
-Detalhes e exemplos de código: seção **“Como montar a pasta de um livro”** em [COMO-USAR.md](COMO-USAR.md).
 
 ## Testes
 
@@ -155,7 +202,7 @@ make test
 
 ## Configuração do projeto
 
-Arquivo `.latex-local.json` na raiz do projeto (não altera o conteúdo científico):
+Arquivo `.latex-local.json` na raiz (preferências de compilação):
 
 ```json
 {
@@ -168,6 +215,8 @@ Arquivo `.latex-local.json` na raiz do projeto (não altera o conteúdo científ
 }
 ```
 
+Em projetos de publicação há também `metadata.json` (tipo, template, classe, engine).
+
 Saída de compilação: `<projeto>/.latex-local/build/`
 
 ## Atalhos
@@ -175,6 +224,7 @@ Saída de compilação: `<projeto>/.latex-local/build/`
 | Atalho | Ação |
 |--------|------|
 | ⌘/Ctrl+S | Salvar |
+| ⌘/Ctrl+F | Procurar |
 | ⌘/Ctrl+Enter | Compilar |
 | ⌘/Ctrl+Shift+Enter | Limpar e compilar |
 | ⌘/Ctrl+P | Abrir arquivo |
@@ -202,6 +252,7 @@ Há integração **opcional** com LLMs no padrão OpenAI (`/v1/chat/completions`
 - Desligada por padrão até cadastrar a chave no painel **Assistente IA**
 - Sugestões de erro de compilação continuam locais (`DiagnosticAssistant` determinístico)
 - Com a IA ativa, o conteúdo do chat (e trechos de contexto, se habilitados) é enviado ao provedor configurado
+- Endpoint `POST /api/projects/{id}/ai/translate-project` — tradução em lote PT→EN (texto dos arquivos)
 
 ## Licença
 

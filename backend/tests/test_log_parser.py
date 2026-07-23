@@ -51,3 +51,20 @@ def test_real_biber_error_still_detected():
     log = "ERROR - Cannot find 'refs.bib'!\n"
     diags = parse_latex_log(log)
     assert any(d.code == "BIBER_ERROR" for d in diags)
+
+
+def test_transient_biblatex_warnings_ignored():
+    log = """
+Package biblatex Warning: Please (re)run Biber on the file:
+Package biblatex Warning: Please rerun LaTeX.
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+Package epstopdf Warning: Shell escape feature is not enabled.
+"""
+    diags = parse_latex_log(log)
+    assert diags == []
+
+
+def test_real_undefined_citation_still_reported():
+    log = "LaTeX Warning: Citation 'silva2020' on page 2 undefined on input line 126.\n"
+    diags = parse_latex_log(log)
+    assert any(d.code == "CITATION_UNDEFINED" for d in diags)

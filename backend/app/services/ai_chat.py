@@ -32,6 +32,10 @@ async def chat_completion(
     context_path: Optional[str] = None,
     context_excerpt: Optional[str] = None,
     settings_data: Optional[AiSettingsData] = None,
+    system_prompt_override: Optional[str] = None,
+    max_tokens_override: Optional[int] = None,
+    temperature_override: Optional[float] = None,
+    timeout: float = 180.0,
 ) -> Tuple[str, str, Optional[int]]:
     cfg = settings_data or load_ai_settings()
     if not cfg.api_key.strip():
@@ -45,7 +49,8 @@ async def chat_completion(
             status_code=400,
         )
 
-    api_messages = [{"role": "system", "content": cfg.system_prompt}]
+    system_prompt = (system_prompt_override or cfg.system_prompt).strip()
+    api_messages = [{"role": "system", "content": system_prompt}]
     if context_path or context_excerpt:
         ctx_parts = ["Contexto do projeto aberto pelo usuário:"]
         if context_path:
@@ -72,8 +77,12 @@ async def chat_completion(
     payload = {
         "model": cfg.model,
         "messages": api_messages,
-        "temperature": cfg.temperature,
-        "max_tokens": cfg.max_tokens,
+        "temperature": (
+            temperature_override
+            if temperature_override is not None
+            else cfg.temperature
+        ),
+        "max_tokens": max_tokens_override or cfg.max_tokens,
     }
     headers = {
         "Authorization": f"Bearer {cfg.api_key}",
@@ -81,7 +90,7 @@ async def chat_completion(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(url, headers=headers, json=payload)
     except httpx.TimeoutException as exc:
         raise AiChatError(

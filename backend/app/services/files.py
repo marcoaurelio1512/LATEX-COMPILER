@@ -95,7 +95,10 @@ def read_file(project_root: Path, relative_path: str) -> FileContent:
     if path.stat().st_size > settings.max_file_size_bytes:
         raise PathSecurityError("Arquivo excede o tamanho máximo permitido")
     if not is_editable(path):
-        raise PathSecurityError("Extensão não editável nesta interface")
+        raise PathSecurityError(
+            f"Não é possível abrir '{path.suffix}' no editor de texto. "
+            "Use o botão Figura para inserir imagens no .tex, ou abra um arquivo .tex/.md/.bib."
+        )
     content = path.read_text(encoding="utf-8")
     return FileContent(
         path=normalize_relative_path(relative_path),
@@ -276,3 +279,67 @@ def search_files(project_root: Path, query: str) -> List[str]:
 
     walk(build_tree(project_root))
     return matches
+
+
+def search_content(
+    project_root: Path,
+    query: str,
+    *,
+    case_sensitive: bool = False,
+    max_hits: int = 200,
+) -> dict:
+    """Busca texto no conteúdo dos arquivos editáveis do projeto."""
+    q = query.strip()
+    if not q:
+        return {"query": query, "hits": [], "truncated": False}
+
+    hits: List[dict] = []
+    truncated = False
+    root = project_root.resolve()
+    ignored = settings.ignored_dir_names
+    needle = q if case_sensitive else q.lower()
+
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        # skip ignored dirs in path
+        try:
+            rel_parts = path.relative_to(root).parts
+        except ValueError:
+            continue
+        if any(is_ignored_dir(p, ignored) for p in rel_parts[:-1]):
+            continue
+        if any(part.startswith(".") for part in rel_parts[:-1]):
+            continue
+        if path.name.startswith(".") and path.name != ".latex-local.json":
+            continue
+        if path.suffix.lower() not in settings.editable_extensions:
+            continue
+        try:
+            if path.stat().st_size > settings.max_file_size_bytes:
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+
+        rel = relative_to_project(root, path)
+        for i, line in enumerate(text.splitlines(), start=1):
+            hay = line if case_sensitive else line.lower()
+            col = hay.find(needle)
+            if col < 0:
+                continue
+            preview = line.strip()
+            if len(preview) > 160:
+                preview = preview[:157] + "..."
+            hits.append(
+                {
+                    "path": rel,
+                    "line": i,
+                    "column": col + 1,
+                    "preview": preview,
+                }
+            )
+            if len(hits) >= max_hits:
+                truncated = True
+                return {"query": query, "hits": hits, "truncated": truncated}
+    return {"query": query, "hits": hits, "truncated": truncated}

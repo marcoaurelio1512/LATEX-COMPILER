@@ -1,0 +1,26 @@
+{
+  "id": "book-default",
+  "name": "Book padrão",
+  "description": "Livro clássico com capítulos, figuras e bibliografia (biblatex/biber).",
+  "project_types": [
+    "book"
+  ],
+  "document_class": "book",
+  "class_options": [
+    "12pt",
+    "a4paper",
+    "openany"
+  ],
+  "engine": "lualatex",
+  "bibliography": "biber",
+  "packages": [
+    "graphicx",
+    "biblatex",
+    "babel"
+  ],
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "validated": true,
+  "warnings": []
+}

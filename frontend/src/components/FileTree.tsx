@@ -9,6 +9,8 @@ import {
   Folder,
   FolderOpen,
   Image as ImageIcon,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 interface Props {
@@ -19,7 +21,7 @@ interface Props {
   onRefresh: () => void;
   onCreateFile: (parent: string) => void;
   onCreateDir: (parent: string) => void;
-  onDelete: (path: string) => void;
+  onDelete: (path: string, isDirectory: boolean) => void;
   onRename: (path: string) => void;
   collapsed?: boolean;
 }
@@ -57,10 +59,11 @@ function TreeNode({
   onOpen: (path: string) => void;
   onCreateFile: (parent: string) => void;
   onCreateDir: (parent: string) => void;
-  onDelete: (path: string) => void;
+  onDelete: (path: string, isDirectory: boolean) => void;
   onRename: (path: string) => void;
 }) {
   const [open, setOpen] = useState(depth < 2);
+  const isRoot = node.type === "directory" && !node.path;
   const isActive = activePath === node.path;
   const dirty = dirtyPaths.has(node.path);
 
@@ -75,22 +78,22 @@ function TreeNode({
         >
           <button
             type="button"
-            className="flex flex-1 items-center gap-1 text-left"
+            className="flex min-w-0 flex-1 items-center gap-1 text-left"
             onClick={() => setOpen((v) => !v)}
           >
             {open ? (
-              <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
             ) : (
-              <ChevronRight className="h-3.5 w-3.5 text-zinc-500" />
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
             )}
             {iconFor(node, open)}
-            <span>{node.name || "projeto"}</span>
+            <span className="truncate">{node.name || "projeto"}</span>
           </button>
-          <div className="hidden gap-1 group-hover:flex">
+          <div className="flex shrink-0 items-center gap-0.5 opacity-70 group-hover:opacity-100">
             <button
               type="button"
-              title="Novo arquivo"
-              className="text-xs text-zinc-400 hover:text-white"
+              title="Novo arquivo nesta pasta"
+              className="rounded px-1 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-white"
               onClick={() => onCreateFile(node.path)}
             >
               +
@@ -98,11 +101,31 @@ function TreeNode({
             <button
               type="button"
               title="Nova pasta"
-              className="text-xs text-zinc-400 hover:text-white"
+              className="rounded px-1 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-white"
               onClick={() => onCreateDir(node.path)}
             >
               ⌂
             </button>
+            {!isRoot && (
+              <>
+                <button
+                  type="button"
+                  title="Renomear pasta"
+                  className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+                  onClick={() => onRename(node.path)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  title="Excluir pasta e todo o conteúdo"
+                  className="rounded p-0.5 text-zinc-400 hover:bg-red-950 hover:text-red-400"
+                  onClick={() => onDelete(node.path, true)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </>
+            )}
           </div>
         </div>
         {open &&
@@ -133,30 +156,39 @@ function TreeNode({
     >
       <button
         type="button"
-        className="flex flex-1 items-center gap-1 truncate text-left"
+        className="flex min-w-0 flex-1 items-center gap-1 truncate text-left"
+        title={
+          [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".pdf", ".eps"].includes(
+            node.extension ?? "",
+          )
+            ? "Imagem/binário: use o botão Figura com um .tex aberto"
+            : undefined
+        }
         onClick={() => onOpen(node.path)}
       >
-        <span className="w-3.5" />
+        <span className="w-3.5 shrink-0" />
         {iconFor(node, false)}
         <span className="truncate">
           {node.name}
           {dirty ? " •" : ""}
         </span>
       </button>
-      <div className="hidden gap-1 group-hover:flex">
+      <div className="flex shrink-0 items-center gap-0.5 opacity-70 group-hover:opacity-100">
         <button
           type="button"
-          className="text-xs text-zinc-400 hover:text-white"
+          title="Renomear"
+          className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-white"
           onClick={() => onRename(node.path)}
         >
-          ✎
+          <Pencil className="h-3.5 w-3.5" />
         </button>
         <button
           type="button"
-          className="text-xs text-zinc-400 hover:text-red-400"
-          onClick={() => onDelete(node.path)}
+          title="Excluir arquivo"
+          className="rounded p-0.5 text-zinc-400 hover:bg-red-950 hover:text-red-400"
+          onClick={() => onDelete(node.path, false)}
         >
-          ×
+          <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>
@@ -201,11 +233,14 @@ export function FileTree(props: Props) {
           Atualizar
         </button>
       </div>
+      <div className="border-b border-zinc-800 px-3 py-1.5 text-[10px] text-zinc-500">
+        Passe o mouse no item → ícone da lixeira para excluir
+      </div>
       <div className="border-b border-zinc-800 p-2">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Pesquisar arquivos"
+          placeholder="Filtrar por nome…"
           className="w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs"
         />
       </div>

@@ -1,0 +1,23 @@
+{
+  "id": "paper-ieee",
+  "name": "IEEE",
+  "description": "Paper no estilo IEEEtran (requer pacote IEEEtran no TeX Live).",
+  "project_types": [
+    "paper"
+  ],
+  "document_class": "IEEEtran",
+  "class_options": [
+    "conference"
+  ],
+  "engine": "pdflatex",
+  "bibliography": "bibtex",
+  "packages": [
+    "cite",
+    "graphicx"
+  ],
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "validated": true,
+  "warnings": []
+}

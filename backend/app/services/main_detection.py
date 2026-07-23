@@ -56,5 +56,10 @@ def choose_main_file(
 
 def detect_main(project_root: Path, configured: Optional[str] = None) -> Tuple[Optional[str], List[str]]:
     candidates = find_documentclass_files(project_root)
+    # Ignora principal configurado se o arquivo não existe mais no projeto
+    if configured:
+        cfg = project_root / configured
+        if not cfg.is_file() or configured not in candidates:
+            configured = None
     main = choose_main_file(candidates, configured)
     return main, candidates

@@ -15,6 +15,12 @@ LINE_ONLY = re.compile(r"^l\.(?P<line>\d+)\s*(?P<ctx>.*)$")
 WARNING = re.compile(
     r"^(?:LaTeX|Package\s+(?P<pkg>\S+)|Class\s+\S+)\s+Warning:\s*(?P<msg>.+)$"
 )
+TRANSIENT_LATEX_WARNING = re.compile(
+    r"Please \(re\)run Biber|Please rerun LaTeX|"
+    r"Label\(s\) may have changed\.\s*Rerun|"
+    r"Shell escape feature is not enabled",
+    re.IGNORECASE,
+)
 OVERFULL = re.compile(r"^(?P<kind>Overfull|Underfull)\s*\.?\\?hbox\b(?P<msg>.*)$", re.IGNORECASE)
 UNDEFINED_CITE = re.compile(
     r"Citation\s+[`'](?P<key>[^`']+)[`']\s+on page\s+\d+\s+undefined",
@@ -163,6 +169,10 @@ def parse_latex_log(log_text: str) -> List[Diagnostic]:
         wm = WARNING.match(stripped)
         if wm:
             msg = wm.group("msg")
+            # Avisos de "compile de novo" / shell-escape — ruído operacional
+            if TRANSIENT_LATEX_WARNING.search(msg) or TRANSIENT_LATEX_WARNING.search(stripped):
+                i += 1
+                continue
             code = "LATEX_WARNING"
             if UNDEFINED_CITE.search(msg):
                 code = "CITATION_UNDEFINED"

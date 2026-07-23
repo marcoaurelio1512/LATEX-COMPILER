@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,7 +20,8 @@ from app.log_parser.parser import parse_with_meta
 from app.models.db import CompilationJob, Project, new_id, utcnow
 from app.schemas.common import CompilationJobOut, CompileRequest, Diagnostic
 from app.services.events import event_bus
-from app.services.project_config import load_project_config
+from app.services.project_config import load_project_config, save_project_config
+from app.services.main_detection import detect_main
 
 logger = get_logger(__name__)
 
@@ -100,10 +103,28 @@ class CompilationService:
             engine = request.engine or config.engine
             mode = request.compiler_mode or config.compiler_mode
             main_file = request.main_file or config.main_file or project.main_file
-            if not main_file:
-                raise ValueError("Arquivo principal não definido")
-            # validate main stays in project
-            resolve_safe_project_path(root, main_file)
+            # Se o principal sumiu do disco (ou nunca existiu), redetecta
+            main_abs = None
+            if main_file:
+                try:
+                    main_abs = resolve_safe_project_path(root, main_file)
+                except Exception:
+                    main_abs = None
+            if not main_file or not main_abs or not main_abs.is_file():
+                detected, _ = detect_main(root, None)
+                if not detected:
+                    raise ValueError(
+                        "Arquivo principal não encontrado. Abra um .tex com "
+                        "\\documentclass e clique em Compilar (ou em Usar na compilação)."
+                    )
+                main_file = detected
+                config.main_file = detected
+                save_project_config(root, config)
+                project.main_file = detected
+                session.add(project)
+                session.commit()
+            else:
+                resolve_safe_project_path(root, main_file)
 
             cancel_prev = config.cancel_previous_on_new
             timeout = config.timeout_seconds or settings.default_timeout_seconds
@@ -311,26 +332,41 @@ class CompilationService:
             {"job_id": job_id, "status": "compiling"},
         )
 
+        compile_env = {
+            "BIBINPUTS": str(root) + os.pathsep + os.environ.get("BIBINPUTS", ""),
+            # // = busca recursiva a partir da raiz do projeto (figuras, etc.)
+            "TEXINPUTS": str(root) + "//" + os.pathsep + os.environ.get("TEXINPUTS", ""),
+        }
         result = await process_manager.start(
             job_id,
             run_args,
             cwd=cwd,
             timeout=timeout,
+            env=compile_env,
         )
 
-        log_text = result.stdout
+        capture = result.stdout or ""
         if result.stderr:
-            log_text = (log_text + "\n" + result.stderr).strip()
+            capture = (capture + "\n" + result.stderr).strip()
 
-        # Prefer latex log file if present
+        # Diagnósticos: só o .log FINAL do LaTeX.
+        # O stdout do latexmk mistura passagens intermediárias (antes do Biber)
+        # e gera falsos "Citation undefined" / "Please rerun Biber".
         main_stem = Path(main_file).stem
         log_file = build_dir / f"{main_stem}.log"
+        file_log = ""
         if log_file.exists():
             try:
                 file_log = log_file.read_text(encoding="utf-8", errors="replace")
-                log_text = file_log + "\n" + log_text
             except OSError:
-                pass
+                file_log = ""
+
+        parse_source = file_log if file_log.strip() else capture
+        log_text = (
+            (file_log + "\n\n----- latexmk -----\n" + capture).strip()
+            if file_log
+            else capture
+        )
 
         status = "completed"
         if result.cancelled:
@@ -340,12 +376,22 @@ class CompilationService:
         elif result.exit_code not in (0, None):
             status = "failed"
 
-        diagnostics, err_count, warn_count = parse_with_meta(log_text, status=status)
+        diagnostics, err_count, warn_count = parse_with_meta(parse_source, status=status)
         if status == "completed" and err_count > 0:
             status = "failed"
 
         pdf_path = build_dir / f"{main_stem}.pdf"
         synctex_path = build_dir / f"{main_stem}.synctex.gz"
+        # latexmk às vezes sai != 0 só por "Please rerun" / refs —
+        # se o PDF existe e não há erro real, trate como sucesso com avisos.
+        if (
+            status == "failed"
+            and err_count == 0
+            and pdf_path.exists()
+            and not result.cancelled
+            and not result.timed_out
+        ):
+            status = "completed"
         captured_log = build_dir / f"{main_stem}.studio.log"
         try:
             captured_log.write_text(log_text, encoding="utf-8")

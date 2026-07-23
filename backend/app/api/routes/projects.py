@@ -73,7 +73,10 @@ def api_pick_folder():
     except FolderPickerError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not selected:
-        raise HTTPException(status_code=400, detail="Seleção de pasta cancelada")
+        raise HTTPException(
+            status_code=400,
+            detail="Seleção de pasta cancelada. O diálogo do Finder pode estar atrás do navegador — traga-o à frente ou cole o caminho da pasta.",
+        )
     return {"path": selected.rstrip("/")}
 
 

@@ -58,3 +58,29 @@ class AiSaveMarkdownResponse(BaseModel):
     md_path: str
     tex_path: Optional[str] = None
     message: str
+
+
+
+class TranslateProjectRequest(BaseModel):
+    extensions: List[str] = Field(
+        default_factory=lambda: [".tex", ".md", ".bib", ".txt"]
+    )
+    dry_run: bool = False
+    create_backup: bool = True
+
+
+class TranslateFileResult(BaseModel):
+    path: str
+    status: Literal["ok", "skipped", "error", "planned"]
+    message: Optional[str] = None
+    chars_in: int = 0
+    chars_out: int = 0
+
+
+class TranslateProjectResponse(BaseModel):
+    files: List[TranslateFileResult] = Field(default_factory=list)
+    message: str
+    translated: int = 0
+    failed: int = 0
+    skipped: int = 0
+    planned: int = 0

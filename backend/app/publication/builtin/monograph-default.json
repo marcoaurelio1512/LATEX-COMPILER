@@ -1,0 +1,20 @@
+{
+  "id": "monograph-default",
+  "name": "Monografia padrão",
+  "description": "Monografia baseada em report/book.",
+  "project_types": [
+    "monograph"
+  ],
+  "document_class": "report",
+  "class_options": [
+    "12pt",
+    "a4paper"
+  ],
+  "engine": "lualatex",
+  "bibliography": "biber",
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "validated": true,
+  "warnings": []
+}

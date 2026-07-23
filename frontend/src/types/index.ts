@@ -134,3 +134,118 @@ export interface AiChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
 }
+
+export type ProjectType =
+  | "book"
+  | "paper"
+  | "thesis"
+  | "dissertation"
+  | "monograph"
+  | "report"
+  | "beamer"
+  | "custom";
+
+export interface TemplateManifest {
+  id: string;
+  name: string;
+  description: string;
+  project_types: ProjectType[];
+  document_class: string;
+  class_options: string[];
+  engine: Engine;
+  bibliography: "auto" | "biber" | "bibtex" | "none";
+  source: "builtin" | "imported";
+  version: string;
+  files: string[];
+  packages: string[];
+  validated: boolean;
+  warnings: string[];
+  path?: string | null;
+}
+
+export interface ProjectMetadata {
+  projectName: string;
+  projectType: ProjectType;
+  template: string;
+  documentClass: string;
+  compiler: string;
+  engine: Engine;
+  bibliography: "auto" | "biber" | "bibtex" | "none";
+  language: string;
+  mainFile: string;
+  contentRoot: string;
+  referencesFile: string;
+  extra: Record<string, unknown>;
+}
+
+export interface TemplateValidation {
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ContentSearchHit {
+  path: string;
+  line: number;
+  column: number;
+  preview: string;
+}
+
+export interface ContentSearchResponse {
+  query: string;
+  hits: ContentSearchHit[];
+  truncated: boolean;
+}
+
+export interface ManualTopic {
+  id: string;
+  title: string;
+  level: number;
+}
+
+export interface ManualResponse {
+  title: string;
+  path: string;
+  markdown: string;
+  topics: ManualTopic[];
+}
+
+export interface FigureItem {
+  path: string;
+  name: string;
+  insert_name: string;
+  folder: string;
+}
+
+export interface BibEntryItem {
+  key: string;
+  entry_type: string;
+  author: string;
+  title: string;
+  year: string;
+  bib_file: string;
+}
+
+export interface InsertablesResponse {
+  figures: FigureItem[];
+  bib_entries: BibEntryItem[];
+}
+
+
+
+export interface TranslateFileResult {
+  path: string;
+  status: "ok" | "skipped" | "error" | "planned";
+  message?: string | null;
+  chars_in: number;
+  chars_out: number;
+}
+
+export interface TranslateProjectResponse {
+  files: TranslateFileResult[];
+  message: string;
+  translated: number;
+  failed: number;
+  skipped: number;
+  planned: number;
+}

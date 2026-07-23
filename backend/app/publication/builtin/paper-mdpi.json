@@ -1,0 +1,22 @@
+{
+  "id": "paper-mdpi",
+  "name": "MDPI",
+  "description": "Base para artigos MDPI. Importe o ZIP oficial MDPI para a classe Definitions/mdpi.",
+  "project_types": [
+    "paper"
+  ],
+  "document_class": "article",
+  "class_options": [],
+  "engine": "pdflatex",
+  "bibliography": "bibtex",
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "packages": [
+    "graphicx"
+  ],
+  "validated": true,
+  "warnings": [
+    "Importe o template oficial MDPI (ZIP) para classes Definitions."
+  ]
+}

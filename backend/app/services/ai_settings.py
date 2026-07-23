@@ -18,6 +18,15 @@ Regras importantes:
 4. Se o usuário pedir um capítulo/seção, entregue o texto completo da seção em Markdown.
 5. Seja claro, bem estruturado e adequado a publicação acadêmica.
 6. Não envolva a resposta inteira em cercas ```markdown — escreva o Markdown direto.
+7. Ao citar, use chaves no texto no formato [@autorAno] (ex.: [@silva2020]).
+8. Se houver bibliografia, inclua uma seção final exatamente assim:
+
+## Referências
+
+- Silva, Maria (2020). Título da obra. Editora Exemplo.
+- [@costa2019] Costa, João (2019). Outro título. Editora Beta.
+
+Isso permite converter depois o Markdown em arquivo .bib automaticamente.
 """
 
 

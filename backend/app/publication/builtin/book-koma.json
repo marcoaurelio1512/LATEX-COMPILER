@@ -1,0 +1,24 @@
+{
+  "id": "book-koma",
+  "name": "KOMA Book",
+  "description": "Livro com classe scrbook (KOMA-Script).",
+  "project_types": [
+    "book"
+  ],
+  "document_class": "scrbook",
+  "class_options": [
+    "12pt",
+    "a4paper"
+  ],
+  "engine": "lualatex",
+  "bibliography": "biber",
+  "packages": [
+    "graphicx",
+    "biblatex"
+  ],
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "validated": true,
+  "warnings": []
+}

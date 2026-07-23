@@ -39,6 +39,8 @@ def build_latexmk_args(
     args = [
         latexmk,
         engine_flag(engine),
+        # Garante Biber/BibTeX quando há \cite (evita [?] no PDF)
+        "-bibtex",
         "-interaction=nonstopmode",
         "-file-line-error",
         f"-outdir={str(out_dir)}",

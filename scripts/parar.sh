@@ -63,6 +63,15 @@ kill_pid_file "Frontend" "$PID_FRONTEND"
 kill_port 8000
 kill_port 3000
 
+# Limpa cache do Next.js para evitar 404 fantasma na próxima abertura
+NEXT_CACHE="$ROOT/frontend/.next"
+if [[ -d "$NEXT_CACHE" ]]; then
+  rm -rf "$NEXT_CACHE"
+  echo "• Cache do app (.next) limpo."
+else
+  echo "• Cache do app (.next): já estava limpo."
+fi
+
 echo
 echo "✓ Servidores parados."
 echo "========================================"

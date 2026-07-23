@@ -5,6 +5,11 @@ Se algo der errado, vá direto à seção [Problemas comuns](#problemas-comuns).
 
 ---
 
+> **Este texto é o mesmo do botão `Como usar` dentro do Studio** (Assistente IA, Traduzir projeto → EN, figuras, barra, etc.).
+>
+> Versão numerada para estudo: [`MANUAL-USO.md`](MANUAL-USO.md).
+
+
 ## O que é este programa?
 
 Imagine o **Word**, mas para textos científicos em LaTeX (artigos, TCCs, livros).
@@ -18,7 +23,7 @@ Diferença importante:
 
 Em uma frase:
 
-> Você abre uma pasta com arquivos `.tex`, edita, aperta **Compilar**, e o PDF aparece do lado direito.
+> Você abre uma pasta com arquivos `.tex`, edita, aperta **Compilar**, e o PDF completo do documento (livro, paper, tese…) aparece do lado direito.
 
 ---
 
@@ -101,8 +106,8 @@ Espere terminar. Só precisa disso na primeira vez (ou se algo quebrar).
 4. Quando aparecer algo como:
    - `API http://127.0.0.1:8000/docs`
    - `App http://localhost:3000`
-5. O navegador deve **abrir sozinho** em **http://localhost:3000**
-   (se não abrir, copie esse endereço manualmente)
+5. O **navegador padrão do Mac** deve abrir sozinho em **http://localhost:3000**, em **página inteira**
+   (se não abrir, copie esse endereço manualmente; para sair da tela cheia use **Ctrl+⌘+F**)
 
 Pronto: o programa está ligado.
 
@@ -127,9 +132,85 @@ Escolhe um arquivo `.tex` no Finder. O Studio abre a **pasta** dele e já mostra
 Escolhe a pasta inteira do trabalho (com capítulos, imagens, `.bib`).  
 Depois, na coluna da esquerda, clique no `.tex` que deseja editar e em **Compilar**.
 
-### Criar projeto novo
-Cria uma pasta nova com um artigo de exemplo (`main.tex`).  
-Bom para testar se está tudo funcionando.
+### Criar projeto novo (tipo + template)
+
+O Studio cria projetos no formato de **publicação**, separando:
+
+| Camada | O que é | Onde fica |
+|--------|---------|-----------|
+| Conteúdo | Seu texto, capítulos, figuras | `content/` |
+| Template | Aparência (IEEE, Book, ABNT…) | `templates/` |
+| Configuração | Tipo, engine, arquivo principal | `metadata.json` e `.latex-local.json` |
+| Compilação | Processo que gera o PDF | botão **Compilar** |
+
+**Passo 1 — Tipo de documento**
+
+Escolha uma opção:
+
+- Livro
+- Paper científico
+- Tese
+- Dissertação
+- Monografia
+- Relatório técnico
+- Apresentação Beamer
+- Documento personalizado
+
+**Passo 2 — Template**
+
+Exemplos conforme o tipo:
+
+- Livro → Book padrão, Memoir, KOMA Book…
+- Paper → IEEE, ACM, Springer LNCS, Elsevier, Nature, MDPI, arXiv, ABNT…
+
+1. Digite o **nome do projeto** (vira o nome da pasta)
+2. Escolha o tipo → continue → escolha o template
+3. Clique em **Criar projeto** e selecione a **pasta pai** no Finder
+
+O Studio gera, por exemplo:
+
+```text
+pasta-pai/meu-livro/
+├── main.tex                 ← arquivo PRINCIPAL (é este que se compila)
+├── metadata.json
+├── studio-compat.sty
+├── .latex-local.json
+├── content/
+│   ├── frontmatter.tex      ← título, autor, sumário
+│   ├── chapters/
+│   │   ├── 01-introducao.tex
+│   │   ├── 02-desenvolvimento.tex
+│   │   └── 99-conclusao.tex
+│   ├── figures/
+│   └── tables/
+├── references/
+│   └── references.bib
+└── templates/<id>/
+```
+
+### Compilar = PDF completo do livro (ou paper)
+
+Se a pasta estiver completa e o `main.tex` for o arquivo principal:
+
+1. Abra o projeto (pasta ou `main.tex`)
+2. Clique em **Compilar**
+
+O Studio usa o `main.tex`, que já inclui frontmatter + capítulos + bibliografia.  
+O resultado é o **PDF do documento inteiro** — não um capítulo isolado.
+
+Só falha se faltar LaTeX no Mac, imagem citada, pacote/classe, ou se outro arquivo estiver marcado como principal.
+
+### Templates de publicação (painel no workspace)
+
+Com o projeto aberto, o botão **Templates** na barra de cima abre o painel para:
+
+- ver templates **nativos** e **importados** (versão, engine, arquivos, status validado);
+- **importar** pasta de template oficial (`.cls`, `.sty`, `.bst`, logos…);
+- **validar** o template;
+- **aplicar** outro template (ex.: IEEE → Nature) **sem apagar** o que está em `content/`;
+- remover templates importados.
+
+Macros de compatibilidade (`\DocumentTitle`, `\DocumentAuthor`, …) permitem trocar a aparência sem reescrever o texto à mão.
 
 ### Abrir por caminho
 Você pode:
@@ -171,7 +252,16 @@ A tela se divide em **3 colunas** + uma faixa embaixo:
 
 ### Coluna esquerda — Arquivos
 É a pasta do seu projeto.  
-Clique em um arquivo `.tex` para abrir no editor.
+Clique em um arquivo `.tex` (ou `.md` / `.bib`) para abrir no editor.
+
+**Imagens** (`.png`, `.jpg`, `.gif`, `.svg`, `.webp`): ao clicar, abre um **preview** da figura (útil quando o nome do arquivo não descreve o conteúdo). Use **Fechar** ou Esc para sair. Para colocar a imagem no texto, use **Inserir Figura** com um `.tex` aberto.
+
+Para **excluir** um arquivo ou pasta (inclusive na raiz do livro/tese):
+1. Passe o mouse sobre o nome na lista
+2. Clique no ícone da **lixeira**
+3. Confirme na caixa de diálogo
+
+Pastas são removidas com todo o conteúdo. A pasta raiz do projeto (o próprio livro) **não** pode ser apagada por aqui — use o Finder se quiser remover o projeto inteiro.
 
 ### Coluna do meio — Editor
 Onde você escreve/edita o LaTeX.  
@@ -179,14 +269,48 @@ Parece um bloco de notas com números de linha.
 
 Bolinha ou ponto no nome da aba = arquivo **ainda não salvo**.
 
+### Inserir figura ou citação (no .tex)
+
+Com um arquivo `.tex` aberto:
+
+1. Posicione o cursor onde deseja inserir
+2. Clique em **Inserir Figura** — grade com **miniaturas** das pastas `figuras/` / `figures/` / `content/figures/`
+3. Ou clique em **Inserir Citação** — escolhe uma chave do `.bib`
+
+O que o Studio faz automaticamente:
+
+| Ação | Resultado |
+|------|-----------|
+| Inserir figura | Código `\includegraphics` (ou bloco `figure` + legenda). Se faltar, adiciona `graphicx`, `\graphicspath` e **português** (`\usepackage[brazilian]{babel}`) para o PDF mostrar **Figura 1:** (não “Figure 1:”) |
+| Inserir citação | Insere **sempre entre parênteses**: `(\cite{chave})`. Se faltar, liga `biblatex` + `referencias.bib` e `\printbibliography` |
+
+Dica: capítulos em subpastas (`capitulos/…`) usam `../figuras/` no caminho gráfico; o compilador também encontra o `.bib` na raiz do projeto.
+
+### Procurar texto (palavra ou frase)
+
+1. Clique em **Procurar** na barra de cima (ou pressione **⌘ + F**)
+2. Digite a palavra ou frase
+3. Escolha o escopo:
+   - **Neste arquivo** — destaca e percorre ocorrências no arquivo aberto (↑ / ↓ ou Enter)
+   - **No projeto** — lista resultados em todos os `.tex`, `.md`, `.bib`, etc.; clique para abrir na linha
+4. Opção **Aa** diferencia maiúsculas/minúsculas
+5. **Esc** ou **Fechar** some a barra
+
+
 ### Coluna direita — Preview PDF
 Mostra o PDF depois da compilação.  
 Se estiver vazio: ainda não compilou, ou a compilação falhou.
+
+- **Visualizar Full** — abre o PDF em tela grande **sobre a mesma página** (não abre outra janela do Mac)
+- **Salvar** — baixa uma cópia do PDF
 
 ### Faixa de baixo — Problemas e Log
 - **Problemas:** erros e avisos em português/resumo (clique para ir à linha)
 - **Log:** texto técnico completo da compilação
 - **Configurações:** opções como “compilar automaticamente”
+
+Você pode **ocultar** ou **mostrar** essa faixa com o botão **Ocultar/Mostrar** (ou ⌘ + J).  
+Com o painel aberto, arraste a barrinha superior dele para **alterar a altura**.
 
 ---
 
@@ -195,7 +319,24 @@ Se estiver vazio: ainda não compilou, ou a compilação falhou.
 O LaTeX **não trabalha com um arquivo solto** como um `.docx`.  
 Ele trabalha com uma **pasta de projeto**. Dentro dela ficam o arquivo principal, os capítulos, as imagens e a bibliografia.
 
-### Estrutura recomendada (copie e adapte)
+> **Preferência atual:** use **Criar projeto novo** (tipo Livro + template). A estrutura com `content/` e `templates/` já vem pronta.  
+> A estrutura “clássica” abaixo (`capitulos/`, `figuras/`) **continua válida** se você já tem um livro assim — abra a pasta e compile o `main.tex`.
+
+### Estrutura gerada pelo Studio (publicação)
+
+```text
+meu-livro/
+├── main.tex
+├── metadata.json
+├── content/chapters/…
+├── content/figures/
+├── references/references.bib
+└── templates/…
+```
+
+Ao **Compilar**, o PDF sai com **todos** os capítulos incluídos pelo `main.tex`.
+
+### Estrutura clássica (também funciona)
 
 No Finder, organize assim:
 
@@ -300,7 +441,7 @@ Como cita um autor: \cite{silva2020}.
 5. Abra o `main.tex`
 6. Se ainda não estiver marcado, clique em **Usar na compilação** (arquivo principal)
 7. Clique em **Compilar**
-8. O PDF do livro deve aparecer à direita
+8. O PDF **completo** do livro (todos os capítulos + bibliografia) deve aparecer à direita
 
 ### Dicas práticas (evitam 90% dos erros)
 
@@ -379,18 +520,123 @@ Se a compilação travar ou demorar demais:
 
 ---
 
-## Botões da barra superior (resumo)
+## Botões da barra superior (organizados por função)
 
+A barra agrupa botões parecidos (Arquivo, Edição, Converter, Compilar, Painéis):
+
+### Arquivo
 | Botão | Para que serve |
 |-------|----------------|
 | **Projetos** | Volta à tela inicial |
-| **Salvar** | Grava o arquivo no disco |
-| **Compilar** | Gera o PDF |
-| **Limpar e compilar** | Limpa lixo da compilação e gera de novo |
-| **Cancelar** | Para uma compilação em andamento |
-| **LuaLaTeX / XeLaTeX / PDFLaTeX** | Escolhe o “motor” (deixe LuaLaTeX se não souber) |
-| **Nativo / Docker** | Nativo = LaTeX do Mac; Docker = LaTeX em caixa isolada (avançado) |
+| **Salvar** | Grava os arquivos abertos no disco (⌘S) |
+| **Salvar como…** | Copia o arquivo atual com outro nome/caminho no projeto |
+| **Baixar** | Baixa uma cópia para a pasta Downloads |
+
+### Edição
+| Botão | Para que serve |
+|-------|----------------|
+| **Procurar** | Busca palavra/frase neste arquivo ou no projeto (⌘F) |
+| **Inserir Figura** | Escolhe imagem (com preview) e insere no `.tex` |
+| **Inserir Citação** | Insere `(\cite{chave})` a partir do `.bib` |
+
+### Converter
+| Botão | Para que serve |
+|-------|----------------|
+| **MD → TeX** | Converte o Markdown aberto em `.tex` |
+| **MD → .bib** | Extrai referências do Markdown e gera `.bib` (escolhe o formato) |
+| **.bib → formato** | Converte um `.bib` entre BibLaTeX, BibTeX clássico ou estilo ABNT |
+| **TeX → MD** | Gera Markdown a partir do LaTeX |
+| **Traduzir projeto → EN** | Usa o **Assistente IA** para traduzir `.tex` / `.md` / `.bib` / `.txt` de português para inglês (com backup) |
+
+### Compilar
+| Botão | Para que serve |
+|-------|----------------|
+| **Usar na compilação** / **Principal** | Define qual `.tex` é o arquivo principal |
+| **Compilar** | Gera o PDF (a partir do arquivo principal) |
+| **Limpar e compilar** | Limpa arquivos temporários e gera de novo |
+| **Cancelar** | Interrompe compilação em andamento |
+| **LuaLaTeX / XeLaTeX / PDFLaTeX** | Motor TeX (deixe LuaLaTeX se não souber) |
+| **Nativo / Docker** | Nativo = LaTeX do Mac; Docker = isolado (avançado) |
 | **Auto** | Compila sozinho depois de salvar |
+
+### Painéis
+| Botão | Para que serve |
+|-------|----------------|
+| **Assistente IA** | Chat opcional (precisa de chave de API) |
+| **Templates** | Importar, validar e trocar template sem apagar o conteúdo |
+| **Como usar** | Abre este manual dentro do app |
+
+---
+
+## Assistente de IA (chat)
+
+O botão **Assistente IA** (grupo Painéis) abre um painel lateral de conversa.
+
+### Para que serve
+- Pedir rascunhos de seções, reescrever trechos, explicar erros
+- Respostas em **Markdown** (dá para salvar e depois converter para `.tex`)
+- Opcionalmente usa o arquivo aberto no editor como **contexto**
+
+### Como configurar (uma vez)
+1. Clique em **Assistente IA**
+2. Cadastre uma chave no padrão **OpenAI-compatible** (também funciona com outros provedores que usem a mesma API: informe `base_url` + `model` + chave)
+3. A chave fica **só no seu Mac** (`~/.latex-studio-local/ai-settings.json`), não no repositório do projeto
+
+### Como usar no dia a dia
+1. Abra o painel **Assistente IA**
+2. Digite o pedido (ex.: “reescreva esta introdução de forma mais acadêmica”)
+3. Se quiser, mantenha um `.tex`/`.md` aberto para a IA ver um trecho do contexto
+4. Use **Salvar .md** ou **Salvar .md → .tex** quando a resposta estiver boa
+5. Há também atalho para gerar `.bib` a partir de referências no Markdown da resposta
+
+### Importante
+- Por padrão o Studio **não** usa IA — só depois que você cadastra a chave
+- Com a IA ligada, o **texto do chat** (e trechos de contexto) vão para o provedor da chave — precisa de internet
+- Erros de compilação na aba Problemas continuam com sugestões **locais** (sem enviar nada), mesmo sem IA
+
+---
+
+## Traduzir o projeto para inglês (IA)
+
+Fluxo pensado para **escrever em português** e, quando quiser, gerar a versão em inglês:
+
+1. Cadastre a chave no painel **Assistente IA** (padrão OpenAI-compatible)
+2. Escreva e revise o projeto em português
+3. Clique em **Traduzir projeto → EN**
+4. Confirme a lista de arquivos (`.tex`, `.md`, `.bib`, `.txt`)
+5. Aguarde — pode demorar e consumir tokens da sua API
+
+O que acontece:
+
+- O conteúdo é traduzido **no próprio arquivo** (sobrescreve)
+- Há **backup** em `sua-pasta/.latex-local/translate-backup/`
+- Comandos LaTeX, `\cite`, `\label`, fórmulas e chaves do `.bib` são preservados
+- `babel` brasileiro passa a `english` quando aplicável
+
+> Sem chave de IA configurada, o botão pede para abrir o Assistente IA.  
+> A tradução **envia o texto dos arquivos** ao provedor da chave (não é 100% offline).
+
+---
+
+## Formatos de bibliografia (.bib)
+
+Ao usar **MD → .bib** ou **.bib → formato**, você escolhe o perfil:
+
+| Perfil | Quando usar |
+|--------|-------------|
+| **biblatex** | Com `\usepackage{biblatex}` + Biber (padrão do Studio ao inserir citação) |
+| **bibtex** | BibTeX clássico (`\bibliographystyle` + BibTeX) |
+| **abnt** | Estilo mais próximo de normas ABNT em entradas `.bib` |
+
+---
+
+## Avisos de compilação (o que importa)
+
+Depois de **Compilar**, a aba **Problemas** mostra erros e avisos do **resultado final**.
+
+- Mensagens do tipo “rode o Biber de novo” / “Citation undefined” **só na passagem intermediária** não devem mais aparecer se o PDF já saiu certo
+- Use **Copiar problemas** para colar o relatório na IA ou no professor
+- Aviso de “Shell escape” é normal neste Studio (segurança: shell-escape fica desligado)
 
 ---
 
@@ -399,6 +645,7 @@ Se a compilação travar ou demorar demais:
 | Atalho | Ação |
 |--------|------|
 | ⌘ + S | Salvar |
+| ⌘ + F | Procurar (neste arquivo ou no projeto) |
 | ⌘ + Enter | Compilar |
 | ⌘ + Shift + Enter | Limpar e compilar |
 | ⌘ + B | Mostrar/ocultar lista de arquivos |
@@ -413,32 +660,38 @@ Continuam **na pasta que você abriu**.
 O Studio **não copia** seu TCC para outro lugar misterioso.
 
 ### Configuração do projeto
-Pode aparecer um arquivo:
+Podem aparecer:
 
 ```text
-.latex-local.json
+.latex-local.json    ← arquivo principal, motor, auto-compilar…
+metadata.json        ← tipo de projeto, template, classe LaTeX (publicação)
 ```
 
-Isso só guarda preferências (arquivo principal, motor, etc.).  
-**Não altera** o conteúdo científico do seu trabalho.
+Isso só guarda preferências e metadados.  
+**Não substitui** o texto científico em `content/`.
 
-### PDF e arquivos temporários
+### PDF, temporários e backups de tradução
 Ficam em:
 
 ```text
-sua-pasta/.latex-local/build/
+sua-pasta/.latex-local/build/                 ← PDF e logs da compilação
+sua-pasta/.latex-local/translate-backup/      ← cópia PT antes de Traduzir → EN
 ```
 
-Você pode ignorar essa pasta no dia a dia. O preview já mostra o PDF.
+Você pode ignorar essas pastas no dia a dia. O preview já mostra o PDF.
 
 ---
 
 ## Privacidade (importante)
 
 - Não precisa de login
-- Não sobe arquivo para nuvem
-- Não manda seu texto para inteligência artificial
-- Funciona sem internet (depois de instalado)
+- Não sobe arquivo para nuvem **por padrão**
+- Funciona sem internet (depois de instalado), **exceto** se você usar o Assistente IA
+
+Exceções opcionais (só se você ativar):
+
+- **Assistente IA** (chat) — envia as mensagens do chat ao provedor da chave
+- **Traduzir projeto → EN** — envia o conteúdo dos arquivos traduzidos ao mesmo provedor
 
 Se alguém pedir senha ou “conta Overleaf” **dentro deste programa**, desconfie: esta versão local não usa isso.
 
@@ -450,6 +703,18 @@ Se alguém pedir senha ou “conta Overleaf” **dentro deste programa**, descon
 - Espere 5–10 segundos
 - Abra manualmente: http://localhost:3000
 - Se falhar, rode `PARAR.command` e depois `INICIAR.command` de novo
+
+### 1b) Abriu no Chrome (ou outro) em vez do navegador padrão
+
+O INICIAR usa o **navegador padrão do macOS**. Confira em:
+
+**Ajustes → Desktop e Dock → Navegador padrão** (ou **Ajustes → Geral**, conforme a versão do macOS).
+
+Depois rode **PARAR** e **INICIAR** de novo.
+
+### 1c) Quero sair da página inteira (tela cheia)
+
+Pressione **Ctrl + ⌘ + F** (ou o atalho de tela cheia do seu navegador).
 
 ### 2) A tela abre, mas compilar falha
 Quase sempre falta o MacTeX.  
@@ -467,6 +732,11 @@ cd "/Users/marcoaureliocarvalho/Desktop/PROJETO COMPILADOR LATEX"
 - Salve o arquivo (⌘ + S)
 - Compile de novo
 - Ou use **Limpar e compilar**
+
+### 4b) Compilei, mas o PDF parece “incompleto”
+- Confirme que o arquivo principal é o `main.tex` (botão **Usar na compilação**)
+- Nos projetos de publicação, os capítulos precisam estar em `content/chapters/` **e** listados no `main.tex` via `\input{...}`
+- Capítulos novos: crie o `.tex` e acrescente um `\input{content/chapters/seu-arquivo}` no `main.tex`
 
 ### 5) Fechei o Terminal e o site parou
 Normal. Os servidores precisam estar ligados.  
@@ -503,13 +773,11 @@ Também usa Pandoc se estiver instalado; senão, conversor interno básico.
 - [ ] Rodei `./scripts/setup-macos.sh` uma vez
 - [ ] Dei dois cliques em `INICIAR.command`
 - [ ] Abri http://localhost:3000
-- [ ] Abri a pasta `examples/article`
+- [ ] Criei um projeto (tipo Livro + template) **ou** abri `examples/book` / `examples/article`
+- [ ] Confirmei que o arquivo principal é o `main.tex`
+- [ ] (Opcional) Inseri figura/citação ou traduzi o projeto → EN
 - [ ] Cliquei em **Compilar**
-- [ ] Vi o PDF à direita
-- [ ] (Opcional) Abri `examples/book` ou montei minha pasta no modelo da seção “Como montar a pasta de um livro”
-- [ ] Quando terminei, cliquei em `PARAR.command`
-
----
+- [ ] Vi o PDF **completo** à direita
 
 ## Para quem quiser ir além
 

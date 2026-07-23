@@ -76,43 +76,116 @@ def validate_project_root(path: str) -> Path:
     return resolve_open_target(path).project_root
 
 
-def _pick_macos_folder(prompt: str) -> Optional[str]:
-    safe = prompt.replace("\\", "\\\\").replace('"', '\\"')
-    script = (
-        "try\n"
-        f'set chosenFolder to choose folder with prompt "{safe}"\n'
-        "return POSIX path of chosenFolder\n"
-        "on error number -128\n"
-        'return ""\n'
-        "end try"
+def _escape_applescript(text: str) -> str:
+    return text.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _escape_jxa(text: str) -> str:
+    return (
+        text.replace("\\", "\\\\")
+        .replace("'", "\\'")
+        .replace("\n", " ")
+        .replace("\r", " ")
     )
-    return _osascript(script)
+
+
+def _pick_macos_folder(prompt: str) -> Optional[str]:
+    """Abre o seletor só na tela do cursor (sem ativar Finder/navegadores)."""
+    return _macos_open_panel(mode="folder", prompt=prompt)
 
 
 def _pick_macos_tex(prompt: str) -> Optional[str]:
-    safe = prompt.replace("\\", "\\\\").replace('"', '\\"')
-    script = (
-        "try\n"
-        f'set chosenFile to choose file with prompt "{safe}" '
-        "of type {\"public.plain-text\", \"tex\", \"bib\", \"sty\", \"cls\"}\n"
-        "return POSIX path of chosenFile\n"
-        "on error number -128\n"
-        'return ""\n'
-        "end try"
-    )
-    # Fallback mais permissivo se o filtro de tipo falhar em alguns macOS
-    path = _osascript(script)
+    """Abre o seletor de arquivo só na tela do cursor (sem ativar outros apps)."""
+    return _macos_open_panel(mode="file", prompt=prompt)
+
+
+def _macos_open_panel(*, mode: str, prompt: str) -> Optional[str]:
+    """NSOpenPanel via JXA, ancorado no mouse — não mexe em outras Spaces/telas."""
+    safe = _escape_jxa(prompt)
+    # mode: folder | file
+    script = f"""
+ObjC.import('AppKit');
+
+function run() {{
+  var app = $.NSApplication.sharedApplication;
+  try {{
+    app.setActivationPolicy($.NSApplicationActivationPolicyAccessory);
+  }} catch (e) {{}}
+
+  var panel = $.NSOpenPanel.openPanel;
+  panel.setMessage('{safe}');
+  panel.setPrompt('Selecionar');
+  panel.setCanCreateDirectories(false);
+  panel.setAllowsMultipleSelection(false);
+  panel.setResolvesAliases(true);
+
+  if ('{mode}' === 'folder') {{
+    panel.setCanChooseFiles(false);
+    panel.setCanChooseDirectories(true);
+  }} else {{
+    panel.setCanChooseFiles(true);
+    panel.setCanChooseDirectories(false);
+    try {{
+      panel.setAllowedFileTypes(
+        $.NSArray.arrayWithArray(['tex', 'bib', 'sty', 'cls', 'md', 'txt', 'latex'])
+      );
+    }} catch (e) {{}}
+  }}
+
+  // Evita o painel aparecer em todas as Spaces
+  try {{
+    panel.setCollectionBehavior(
+      $.NSWindowCollectionBehaviorMoveToActiveSpace |
+      $.NSWindowCollectionBehaviorTransient
+    );
+  }} catch (e) {{}}
+
+  // Centraliza no cursor (= tela/Space onde o usuário clicou na interface)
+  try {{
+    var mouse = $.NSEvent.mouseLocation;
+    var size = panel.frame.size;
+    var origin = $.NSMakePoint(
+      mouse.x - (size.width / 2),
+      mouse.y - (size.height / 2)
+    );
+    panel.setFrameOrigin(origin);
+  }} catch (e) {{}}
+
+  // Sem activateIgnoringOtherApps: evita puxar janelas em outras Spaces
+  var result = panel.runModal;
+  if (result === $.NSModalResponseOK) {{
+    var urls = panel.URLs;
+    if (urls && urls.count > 0) {{
+      return ObjC.unwrap(urls.objectAtIndex(0).path);
+    }}
+  }}
+  return '';
+}}
+"""
+    path = _osascript_js(script)
     if path:
         return path
-    script2 = (
-        "try\n"
-        f'set chosenFile to choose file with prompt "{safe}"\n'
-        "return POSIX path of chosenFile\n"
-        "on error number -128\n"
-        'return ""\n'
-        "end try"
-    )
-    return _osascript(script2)
+    # Fallback mínimo: choose folder/file SEM activate de nenhum app
+    return _macos_choose_plain(mode=mode, prompt=prompt)
+
+
+def _macos_choose_plain(*, mode: str, prompt: str) -> Optional[str]:
+    safe = _escape_applescript(prompt)
+    if mode == "folder":
+        body = f'set chosen to choose folder with prompt "{safe}"'
+        ret = "POSIX path of chosen"
+    else:
+        body = f'set chosen to choose file with prompt "{safe}"'
+        ret = "POSIX path of chosen"
+    script = f"""
+try
+  {body}
+  return {ret}
+on error number -128
+  return ""
+end try
+"""
+    return _osascript(script)
 
 
 def _osascript(script: str) -> Optional[str]:
@@ -124,6 +197,21 @@ def _osascript(script: str) -> Optional[str]:
         timeout=300,
     )
     path = (result.stdout or "").strip()
+    return path or None
+
+
+def _osascript_js(script: str) -> Optional[str]:
+    result = subprocess.run(
+        ["osascript", "-l", "JavaScript", "-e", script],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+    path = (result.stdout or "").strip()
+    if not path and result.returncode != 0:
+        # painel cancelado ou JXA indisponível
+        return None
     return path or None
 
 

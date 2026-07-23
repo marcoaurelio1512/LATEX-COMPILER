@@ -1,0 +1,23 @@
+{
+  "id": "custom-imported",
+  "name": "Template personalizado",
+  "description": "Importe um ZIP/pasta oficial (IEEE, revista, universidade).",
+  "project_types": [
+    "custom",
+    "paper",
+    "book",
+    "thesis",
+    "dissertation",
+    "monograph",
+    "report",
+    "beamer"
+  ],
+  "document_class": "article",
+  "engine": "pdflatex",
+  "bibliography": "auto",
+  "validated": false,
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "warnings": []
+}

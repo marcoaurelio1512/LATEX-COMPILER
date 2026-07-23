@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { EditorFindHandle } from "./EditorPane";
 import { api } from "@/services/api";
 import { connectEvents } from "@/services/ws";
 import type {
@@ -13,6 +14,14 @@ import type {
 } from "@/types";
 import { BottomPanel } from "./BottomPanel";
 import { EditorPane } from "./EditorPane";
+import { FindBar } from "./FindBar";
+import { HowToUseModal } from "./HowToUseModal";
+import { InsertPicker, type InsertMode } from "./InsertPicker";
+import {
+  ImagePreviewModal,
+  type ImagePreviewTarget,
+} from "./ImagePreviewModal";
+import { BibFormatModal, type BibFormatChoice } from "./BibFormatModal";
 import { FileTree } from "./FileTree";
 import dynamic from "next/dynamic";
 
@@ -22,6 +31,29 @@ const PdfPreview = dynamic(
 );
 import { Toolbar } from "./Toolbar";
 import { AiAssistant } from "./AiAssistant";
+
+const BINARY_OPEN_EXTS = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".svg",
+  ".webp",
+  ".pdf",
+  ".eps",
+]);
+
+const IMAGE_PREVIEW_EXTS = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".svg",
+  ".webp",
+]);
+
+
+import { TemplatesPanel } from "./TemplatesPanel";
 
 interface Props {
   projectId: string;
@@ -48,13 +80,25 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
   const [reveal, setReveal] = useState<{
     path: string;
     line: number;
+    column?: number;
     nonce: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [convertingMd, setConvertingMd] = useState(false);
+  const [convertingMdBib, setConvertingMdBib] = useState(false);
   const [convertingTex, setConvertingTex] = useState(false);
+  const [translatingProject, setTranslatingProject] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
   const [showAi, setShowAi] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showFind, setShowFind] = useState(false);
+  const [showManual, setShowManual] = useState(false);
+  const [insertMode, setInsertMode] = useState<InsertMode>(null);
+  const [imagePreview, setImagePreview] = useState<ImagePreviewTarget | null>(null);
+  const [bibModal, setBibModal] = useState<null | "md" | "bib">(null);
+  const [convertingBib, setConvertingBib] = useState(false);
+  const [compileOverlay, setCompileOverlay] = useState(false);
+  const editorFindRef = useRef<EditorFindHandle | null>(null);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const compileTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -72,6 +116,11 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
   const compiling = ["queued", "preparing", "compiling"].includes(
     job?.status ?? "",
   );
+
+  useEffect(() => {
+    if (compiling) setCompileOverlay(true);
+    else setCompileOverlay(false);
+  }, [compiling]);
 
   const refreshTree = useCallback(async () => {
     const t = await api.getTree(projectId);
@@ -178,8 +227,226 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
     });
   }, [projectId, refreshTree]);
 
+
+  function ensureBrazilianLocale(content: string): string {
+    const beginDoc = content.indexOf("\\begin{document}");
+    if (beginDoc < 0) return content;
+    const preamble = content.slice(0, beginDoc);
+
+    const babelMatch = preamble.match(
+      /\\usepackage(?:\[([^\]]*)\])?\{babel\}/,
+    );
+    if (babelMatch) {
+      const opts = (babelMatch[1] || "").toLowerCase();
+      if (
+        opts.includes("brazilian") ||
+        opts.includes("brazil") ||
+        opts.includes("portuguese")
+      ) {
+        return content;
+      }
+      // Babel em outro idioma: força rótulos de figura/tabela em PT
+      if (!/\\renewcommand\{\\figurename\}/.test(preamble)) {
+        const inject =
+          "\\renewcommand{\\figurename}{Figura}\n" +
+          "\\renewcommand{\\tablename}{Tabela}\n\n";
+        return content.slice(0, beginDoc) + inject + content.slice(beginDoc);
+      }
+      return content;
+    }
+
+    const inject = "\\usepackage[brazilian]{babel}\n\n";
+    return content.slice(0, beginDoc) + inject + content.slice(beginDoc);
+  }
+
+  function ensureFigurePackages(content: string, active?: string | null): string {
+    const beginDoc = content.indexOf("\\begin{document}");
+    if (beginDoc < 0) return content;
+    const preamble = content.slice(0, beginDoc);
+    const dirDepth = active?.includes("/")
+      ? active
+          .slice(0, active.lastIndexOf("/"))
+          .split("/")
+          .filter(Boolean).length
+      : 0;
+    const parent = dirDepth > 0 ? "../".repeat(dirDepth) : "";
+    const folders = [
+      "figuras/",
+      "figures/",
+      "content/figures/",
+      "images/",
+      ...(parent
+        ? [`${parent}figuras/`, `${parent}figures/`, `${parent}images/`]
+        : []),
+    ];
+    const pathList = folders.map((p) => `{${p}}`).join("");
+
+    let next = content;
+    if (!/\\usepackage(?:\[[^\]]*\])?\{graphicx\}/.test(preamble)) {
+      const inject =
+        "\\usepackage{graphicx}\n" + `\\graphicspath{${pathList}}\n\n`;
+      next = next.slice(0, beginDoc) + inject + next.slice(beginDoc);
+    } else if (parent && !preamble.includes(`${parent}figuras/`)) {
+      if (/\\graphicspath\{/.test(next)) {
+        next = next.replace(
+          /\\graphicspath\{/,
+          `\\graphicspath{{${parent}figuras/}{${parent}figures/}{${parent}images/}`,
+        );
+      }
+    }
+    return ensureBrazilianLocale(next);
+  }
+
+  function ensureCitePackages(content: string, _active?: string): string {
+    // Nome simples: o compilador define BIBINPUTS na raiz do projeto
+    const bibName = "referencias.bib";
+    const beginDoc = content.indexOf("\\begin{document}");
+    if (beginDoc < 0) return content;
+    const preamble = content.slice(0, beginDoc);
+    let next = content;
+
+    if (!/\\usepackage(?:\[[^\]]*\])?\{biblatex\}/.test(preamble)) {
+      const inject =
+        "\\usepackage[backend=biber,style=authoryear]{biblatex}\n" +
+        `\\addbibresource{${bibName}}\n\n`;
+      const bd = next.indexOf("\\begin{document}");
+      next = next.slice(0, bd) + inject + next.slice(bd);
+    } else {
+      // corrige ../referencias.bib (quebra com outdir .latex-local/build)
+      next = next.replace(
+        /\\addbibresource\{\.\.\/referencias\.bib\}/g,
+        `\\addbibresource{${bibName}}`,
+      );
+      const pre = next.slice(0, next.indexOf("\\begin{document}"));
+      if (!/\\addbibresource\{/.test(pre)) {
+        next = next.replace(
+          /(\\usepackage(?:\[[^\]]*\])?\{biblatex\})/,
+          `$1\n\\addbibresource{${bibName}}`,
+        );
+      }
+    }
+
+    if (!/\\printbibliography/.test(next) && /\\end\{document\}/.test(next)) {
+      next = next.replace(
+        /\\end\{document\}/,
+        "\n\\printbibliography\n\n\\end{document}",
+      );
+    }
+    return ensureBrazilianLocale(next);
+  }
+
+  async function translateProjectToEnglish() {
+    if (translatingProject) return;
+    try {
+      const settings = await api.getAiSettings();
+      if (!settings.has_api_key || !settings.enabled) {
+        setError(
+          "Configure a chave da API no Assistente IA antes de traduzir o projeto.",
+        );
+        setShowAi(true);
+        return;
+      }
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Não foi possível verificar as configurações de IA.",
+      );
+      return;
+    }
+
+    let planned = 0;
+    try {
+      const preview = await api.translateProject(projectId, { dry_run: true });
+      planned = preview.planned || preview.files.length;
+      if (!planned) {
+        setInfo("Nenhum arquivo .tex/.md/.bib/.txt encontrado para traduzir.");
+        return;
+      }
+      const ok = window.confirm(
+        `Traduzir ${planned} arquivo(s) do projeto para INGLÊS?\n\n` +
+          "• Sobrescreve o conteúdo dos arquivos\n" +
+          "• Guarda backup em .latex-local/translate-backup/\n" +
+          "• Usa o Assistente IA (pode demorar e consumir tokens)\n\n" +
+          "Escreva em português e use este botão quando quiser a versão em inglês.",
+      );
+      if (!ok) return;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao listar arquivos");
+      return;
+    }
+
+    setTranslatingProject(true);
+    setError(null);
+    setInfo(`Traduzindo ${planned} arquivo(s) para inglês… Aguarde.`);
+    try {
+      const result = await api.translateProject(projectId, {
+        dry_run: false,
+        create_backup: true,
+      });
+      await refreshTree();
+      // recarrega abas afetadas
+      const changed = new Set(
+        result.files.filter((f) => f.status === "ok").map((f) => f.path),
+      );
+      for (const path of changed) {
+        try {
+          const file = await api.readFile(projectId, path);
+          setTabs((prev) =>
+            prev.map((tab) =>
+              tab.path === path
+                ? {
+                    ...tab,
+                    content: file.content,
+                    originalContent: file.content,
+                    dirty: false,
+                    mtime: new Date(file.modified_at).getTime() / 1000,
+                  }
+                : tab,
+            ),
+          );
+        } catch {
+          /* ignore reload errors per file */
+        }
+      }
+      setInfo(result.message);
+      if (result.failed > 0) {
+        const first = result.files.find((f) => f.status === "error");
+        setError(
+          first
+            ? `Algumas falhas na tradução. Ex.: ${first.path}: ${first.message}`
+            : "Algumas falhas na tradução.",
+        );
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha na tradução do projeto");
+    } finally {
+      setTranslatingProject(false);
+    }
+  }
+
   async function openFile(path: string) {
     if (!path) return;
+    const ext = path.includes(".")
+      ? `.${path.split(".").pop()!.toLowerCase()}`
+      : "";
+    if (IMAGE_PREVIEW_EXTS.has(ext)) {
+      setError(null);
+      setInfo(null);
+      setImagePreview({
+        path,
+        name: path.split("/").pop() || path,
+      });
+      return;
+    }
+    if (BINARY_OPEN_EXTS.has(ext)) {
+      setError(null);
+      setInfo(
+        `"${path}" é um arquivo binário e não abre no editor. ` +
+          `Com um .tex aberto, use Inserir Figura para imagens.`,
+      );
+      return;
+    }
     setActivePath(path);
     if (tabsRef.current.some((t) => t.path === path)) {
       return;
@@ -201,6 +468,12 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
         if (prev.some((t) => t.path === path)) return prev;
         return [...prev, tab];
       });
+      setError(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Falha ao abrir arquivo";
+      // evita Unhandled Runtime Error do Next.js
+      setError(msg.replace(/^"|"$/g, ""));
+      setActivePath((prev) => (prev === path ? null : prev));
     } finally {
       openingFiles.current.delete(path);
     }
@@ -307,6 +580,20 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
     }, config.compile_debounce_ms || 1200);
   }
 
+  function resolveCompileMainFile(): string | undefined {
+    const activeTex =
+      activePath && activePath.toLowerCase().endsWith(".tex") ? activePath : null;
+    if (activeTex) {
+      const tab = tabsRef.current.find((t) => t.path === activeTex);
+      const content = tab?.content ?? "";
+      // Arquivo aberto com \documentclass = esse é o que deve compilar
+      if (/\\documentclass\b/.test(content)) {
+        return activeTex;
+      }
+    }
+    return config?.main_file || undefined;
+  }
+
   async function doCompile(clean: boolean) {
     if (compilingLock.current) return;
     compilingLock.current = true;
@@ -319,14 +606,27 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
       saveTimer.current = null;
     }
     try {
+      setCompileOverlay(true);
       // Salva arquivos sujos SEM agendar nova compilação (evita loop infinito)
       await saveAll({ triggerCompile: false });
+      const mainFile = resolveCompileMainFile();
+      if (
+        mainFile &&
+        config &&
+        mainFile !== config.main_file &&
+        activePath === mainFile
+      ) {
+        await persistConfig({ ...config, main_file: mainFile });
+        setInfo(`Compilando: ${mainFile} (definido como principal)`);
+      }
+      const compileBody = {
+        engine: config?.engine,
+        compiler_mode: config?.compiler_mode,
+        main_file: mainFile,
+      };
       const result = clean
-        ? await api.compileClean(projectId)
-        : await api.compile(projectId, {
-            engine: config?.engine,
-            compiler_mode: config?.compiler_mode,
-          });
+        ? await api.compileClean(projectId, compileBody)
+        : await api.compile(projectId, compileBody);
       setJob(result);
       // Job já terminado (ex.: coalescido) — libera o lock.
       if (
@@ -344,6 +644,7 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
       pollJob(result.job_id);
     } catch (e) {
       compilingLock.current = false;
+      setCompileOverlay(false);
       setError(e instanceof Error ? e.message : "Falha ao compilar");
     }
   }
@@ -445,6 +746,71 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
       setError(e instanceof Error ? e.message : "Falha na conversão MD → TeX");
     } finally {
       setConvertingMd(false);
+    }
+  }
+
+
+  function convertMdBib() {
+    if (!activePath || !activePath.toLowerCase().endsWith(".md")) {
+      setError("Abra um arquivo .md com referências para gerar o .bib.");
+      return;
+    }
+    setBibModal("md");
+  }
+
+  function convertBibProfile() {
+    if (!activePath || !activePath.toLowerCase().endsWith(".bib")) {
+      setError("Abra um arquivo .bib para converter o formato.");
+      return;
+    }
+    setBibModal("bib");
+  }
+
+  async function runBibFormatChoice(choice: BibFormatChoice) {
+    const mode = bibModal;
+    setBibModal(null);
+    if (!mode || !activePath) return;
+    if (!choice.outputPath.toLowerCase().endsWith(".bib")) {
+      setError("O caminho de saída precisa terminar com .bib");
+      return;
+    }
+    setError(null);
+    setInfo(null);
+    if (mode === "md") {
+      setConvertingMdBib(true);
+      try {
+        await saveAll({ triggerCompile: false });
+        const result = await api.mdToBib(projectId, {
+          path: activePath,
+          output_path: choice.outputPath,
+          append: true,
+          profile: choice.profile,
+        });
+        await refreshTree();
+        await openFile(result.output_path);
+        setInfo(result.message);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Falha na conversão MD → .bib");
+      } finally {
+        setConvertingMdBib(false);
+      }
+      return;
+    }
+    setConvertingBib(true);
+    try {
+      await saveAll({ triggerCompile: false });
+      const result = await api.convertBib(projectId, {
+        path: activePath,
+        output_path: choice.outputPath,
+        profile: choice.profile,
+      });
+      await refreshTree();
+      await openFile(result.output_path);
+      setInfo(result.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao converter .bib");
+    } finally {
+      setConvertingBib(false);
     }
   }
 
@@ -555,6 +921,10 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
         const q = window.prompt("Abrir arquivo (caminho relativo):");
         if (q) void openFile(q);
       }
+      if (mod(e) && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        setShowFind(true);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -570,6 +940,27 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
 
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-zinc-100">
+
+      {compileOverlay && (
+        <div
+          className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center bg-black/55"
+          role="status"
+          aria-live="assertive"
+        >
+          <div className="pointer-events-none mx-4 max-w-xl rounded-2xl border-4 border-red-500 bg-red-950/95 px-10 py-8 text-center shadow-2xl shadow-red-900/50">
+            <p className="text-3xl font-black tracking-wide text-red-400 md:text-4xl">
+              COMPILANDO, AGUARDE
+            </p>
+            <p className="mt-3 text-base font-medium text-red-200/90 md:text-lg">
+              Isso pode demorar um pouco
+            </p>
+            <div className="mx-auto mt-6 h-1.5 w-48 overflow-hidden rounded-full bg-red-900">
+              <div className="h-full w-1/2 animate-pulse rounded-full bg-red-500" />
+            </div>
+          </div>
+        </div>
+      )}
+
       <Toolbar
         project={project}
         config={config}
@@ -577,6 +968,8 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
         activePath={activePath}
         dirty={dirtyPaths.size > 0}
         convertingMd={convertingMd}
+        convertingMdBib={convertingMdBib}
+        convertingBib={convertingBib}
         convertingTex={convertingTex}
         onBack={onClose}
         onSave={() => void saveAll()}
@@ -589,9 +982,20 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
           if (job) void api.cancel(job.job_id);
         }}
         onConvertMd={() => void convertMd()}
+        onConvertMdBib={() => convertMdBib()}
+        onConvertBib={() => convertBibProfile()}
         onConvertTex={() => void convertTex()}
+        onTranslateProject={() => void translateProjectToEnglish()}
+        translatingProject={translatingProject}
         onToggleAi={() => setShowAi((v) => !v)}
         aiOpen={showAi}
+        onToggleTemplates={() => setShowTemplates((v) => !v)}
+        templatesOpen={showTemplates}
+        onToggleFind={() => setShowFind((v) => !v)}
+        findOpen={showFind}
+        onToggleManual={() => setShowManual(true)}
+        onInsertFigure={() => setInsertMode("figure")}
+        onInsertCite={() => setInsertMode("cite")}
         onConfigPatch={(patch) => void persistConfig({ ...config, ...patch })}
       />
       {error && (
@@ -604,6 +1008,29 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
           {info}
         </div>
       )}
+      <FindBar
+        open={showFind}
+        projectId={projectId}
+        activePath={activePath}
+        activeContent={
+          tabs.find((t) => t.path === activePath)?.content ?? null
+        }
+        onClose={() => setShowFind(false)}
+        onFindInEditor={(query, options) =>
+          editorFindRef.current?.find(query, options) ?? null
+        }
+        onClearFind={() => editorFindRef.current?.clearFind()}
+        onJump={(path, line, column) => {
+          void openFile(path).then(() => {
+            setReveal({
+              path,
+              line,
+              column: column ?? 1,
+              nonce: Date.now(),
+            });
+          });
+        }}
+      />
       <div className="flex min-h-0 flex-1">
         <FileTree
           tree={tree}
@@ -627,13 +1054,49 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
             const path = parent ? `${parent}/${name}` : name;
             void api.mkdir(projectId, path).then(() => refreshTree());
           }}
-          onDelete={(path) => {
-            if (!window.confirm(`Excluir ${path}?`)) return;
-            void api.deleteFile(projectId, path).then(() => {
-              setTabs((prev) => prev.filter((t) => t.path !== path));
-              if (activePath === path) setActivePath(null);
-              return refreshTree();
-            });
+          onDelete={(path, isDirectory) => {
+            if (!path) {
+              setError("Não é possível excluir a pasta raiz do projeto.");
+              return;
+            }
+            const label = isDirectory
+              ? `a pasta "${path}" e todo o conteúdo dela`
+              : `o arquivo "${path}"`;
+            if (
+              !window.confirm(
+                `Excluir ${label}?\n\nEssa ação remove o item do disco e não pode ser desfeita aqui.`,
+              )
+            ) {
+              return;
+            }
+            void api
+              .deleteFile(projectId, path)
+              .then(() => {
+                setTabs((prev) =>
+                  prev.filter((t) => {
+                    if (t.path === path) return false;
+                    if (isDirectory && t.path.startsWith(path + "/")) return false;
+                    return true;
+                  }),
+                );
+                if (
+                  activePath === path ||
+                  (isDirectory && activePath?.startsWith(path + "/"))
+                ) {
+                  setActivePath(null);
+                }
+                setInfo(
+                  isDirectory
+                    ? `Pasta excluída: ${path}`
+                    : `Arquivo excluído: ${path}`,
+                );
+                return refreshTree();
+              })
+              .catch((e) =>
+                setError(
+                  e instanceof Error ? e.message : "Falha ao excluir",
+                ),
+              );
           }}
           onRename={(path) => {
             const next = window.prompt("Novo caminho:", path);
@@ -642,6 +1105,7 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
           }}
         />
         <EditorPane
+          ref={editorFindRef}
           tabs={tabs}
           activePath={activePath}
           theme={theme}
@@ -649,6 +1113,7 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
           wordWrap={wordWrap}
           diagnostics={diagnostics}
           reveal={reveal}
+          onRequestFind={() => setShowFind(true)}
           onSelectTab={setActivePath}
           onCloseTab={(path) => {
             const tab = tabs.find((t) => t.path === path);
@@ -695,9 +1160,25 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
             });
           }}
         />
+        <TemplatesPanel
+          open={showTemplates}
+          projectId={projectId}
+          onClose={() => setShowTemplates(false)}
+          onInfo={setInfo}
+          onError={setError}
+          onSwitched={() => {
+            void refreshTree().then(async () => {
+              const detail = await api.getProject(projectId);
+              setProject(detail);
+              setConfig(detail.config);
+              await openFile(detail.config.main_file || "main.tex");
+            });
+          }}
+        />
       </div>
       <BottomPanel
-        visible={showBottom}
+        collapsed={!showBottom}
+        onToggle={() => setShowBottom((v) => !v)}
         job={job}
         log={log}
         diagnostics={diagnostics}
@@ -705,6 +1186,85 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
         onConfigChange={(c) => void persistConfig(c)}
         onJump={(d) => void onJump(d)}
       />
+      <HowToUseModal open={showManual} onClose={() => setShowManual(false)} />
+      <BibFormatModal
+        open={!!bibModal}
+        title={
+          bibModal === "bib"
+            ? "Converter .bib para outro formato"
+            : "Gerar .bib a partir do Markdown"
+        }
+        defaultPath={
+          bibModal === "bib"
+            ? (activePath
+                ? activePath.replace(/\.bib$/i, "") + "-biblatex.bib"
+                : "referencias-biblatex.bib")
+            : "referencias.bib"
+        }
+        onClose={() => setBibModal(null)}
+        onConfirm={(choice) => void runBibFormatChoice(choice)}
+      />
+      <InsertPicker
+        open={insertMode}
+        projectId={projectId}
+        onClose={() => setInsertMode(null)}
+        onInsert={(snippet) => {
+          const mode = insertMode;
+          if (!activePath?.toLowerCase().endsWith(".tex")) {
+            setError("Abra um arquivo .tex antes de inserir figura ou citação.");
+            return;
+          }
+          const ok = editorFindRef.current?.insertAtCursor(
+            snippet,
+            mode === "figure"
+              ? {
+                  beforeInsert: (content) =>
+                    ensureFigurePackages(content, activePath),
+                }
+              : mode === "cite"
+                ? {
+                    beforeInsert: (content) =>
+                      ensureCitePackages(content, activePath ?? undefined),
+                  }
+                : undefined,
+          );
+          if (!ok) {
+            setError(
+              "Não foi possível inserir. Clique no editor .tex e tente de novo.",
+            );
+            return;
+          }
+          setError(null);
+          setInfo(
+            mode === "figure"
+              ? "Figura inserida. Se faltava, graphicx e português (babel) foram adicionados ao preâmbulo."
+              : "Citação inserida. Se faltava, biblatex + referencias.bib foram ligados ao .tex.",
+          );
+        }}
+      />
+
+      
+      {translatingProject && (
+        <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/70 p-6">
+          <div className="max-w-md rounded-xl border border-rose-500/40 bg-zinc-950 px-6 py-5 text-center shadow-2xl">
+            <p className="text-lg font-semibold text-rose-100">
+              TRADUZINDO O PROJETO PARA INGLÊS
+            </p>
+            <p className="mt-2 text-sm text-zinc-400">
+              O Assistente IA está convertendo os arquivos. Isso pode demorar
+              alguns minutos — não feche a página.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <ImagePreviewModal
+        open={!!imagePreview}
+        projectId={projectId}
+        target={imagePreview}
+        onClose={() => setImagePreview(null)}
+      />
+
     </div>
   );
 }

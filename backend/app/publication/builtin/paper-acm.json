@@ -1,0 +1,19 @@
+{
+  "id": "paper-acm",
+  "name": "ACM",
+  "description": "Paper no estilo acmart (requer pacote acmart).",
+  "project_types": [
+    "paper"
+  ],
+  "document_class": "acmart",
+  "class_options": [
+    "sigconf"
+  ],
+  "engine": "pdflatex",
+  "bibliography": "bibtex",
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "validated": true,
+  "warnings": []
+}

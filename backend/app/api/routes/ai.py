@@ -17,8 +17,11 @@ from app.schemas.ai import (
     AiSaveMarkdownResponse,
     AiSettingsPublic,
     AiSettingsUpdate,
+    TranslateProjectRequest,
+    TranslateProjectResponse,
 )
 from app.services.ai_chat import AiChatError, chat_completion
+from app.services.ai_translate import translate_project
 from app.services.ai_settings import (
     DEFAULT_SYSTEM_PROMPT,
     load_ai_settings,
@@ -151,3 +154,23 @@ def api_ai_save_markdown(
         tex_path=tex_rel,
         message=message,
     )
+
+
+@router.post(
+    "/projects/{project_id}/ai/translate-project",
+    response_model=TranslateProjectResponse,
+)
+async def api_translate_project(
+    body: TranslateProjectRequest,
+    project: Project = Depends(project_or_404),
+):
+    """Traduz .tex/.md/.bib/.txt do projeto de português para inglês via LLM."""
+    try:
+        return await translate_project(
+            Path(project.root_path),
+            extensions=body.extensions,
+            dry_run=body.dry_run,
+            create_backup=body.create_backup,
+        )
+    except AiChatError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

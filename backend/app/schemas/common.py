@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 Engine = Literal["lualatex", "xelatex", "pdflatex"]
 CompilerMode = Literal["native", "docker"]
 BibliographyMode = Literal["auto", "biber", "bibtex", "none"]
+BibProfileName = Literal["biblatex", "bibtex", "abnt"]
 JobStatus = Literal[
     "idle",
     "queued",
@@ -65,7 +66,7 @@ class OpenProjectRequest(BaseModel):
 class CreateProjectRequest(BaseModel):
     parent_path: Optional[str] = None
     name: str
-    template: Literal["article", "book", "empty"] = "article"
+    template: Literal["article", "book", "empty"] = "book"
     use_native_picker: bool = False
 
 
@@ -200,3 +201,69 @@ class TexToMdResponse(BaseModel):
     output_path: str
     method: str
     message: str
+
+
+class MdToBibRequest(BaseModel):
+    path: Optional[str] = None
+    content: Optional[str] = None
+    output_path: Optional[str] = None
+    append: bool = True
+    profile: BibProfileName = "biblatex"
+
+
+class MdToBibResponse(BaseModel):
+    source_path: Optional[str] = None
+    output_path: str
+    entries_count: int
+    keys: List[str] = Field(default_factory=list)
+    message: str
+    profile: BibProfileName = "biblatex"
+
+
+class BibConvertRequest(BaseModel):
+    path: str
+    output_path: Optional[str] = None
+    profile: BibProfileName = "biblatex"
+
+
+class BibConvertResponse(BaseModel):
+    source_path: str
+    output_path: str
+    entries_count: int
+    keys: List[str] = Field(default_factory=list)
+    message: str
+    profile: BibProfileName = "biblatex"
+
+
+class ContentSearchHit(BaseModel):
+    path: str
+    line: int
+    column: int = 1
+    preview: str = ""
+
+
+class ContentSearchResponse(BaseModel):
+    query: str
+    hits: List[ContentSearchHit] = Field(default_factory=list)
+    truncated: bool = False
+
+
+class FigureItem(BaseModel):
+    path: str
+    name: str
+    insert_name: str
+    folder: str = ""
+
+
+class BibEntryItem(BaseModel):
+    key: str
+    entry_type: str = ""
+    author: str = ""
+    title: str = ""
+    year: str = ""
+    bib_file: str = ""
+
+
+class InsertablesResponse(BaseModel):
+    figures: List[FigureItem] = Field(default_factory=list)
+    bib_entries: List[BibEntryItem] = Field(default_factory=list)

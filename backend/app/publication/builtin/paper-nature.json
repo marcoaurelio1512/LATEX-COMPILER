@@ -1,0 +1,25 @@
+{
+  "id": "paper-nature",
+  "name": "Nature (classe article)",
+  "description": "Base article tipográfica para papers estilo Nature. Importe o ZIP oficial da Nature para tipografia completa.",
+  "project_types": [
+    "paper"
+  ],
+  "document_class": "article",
+  "class_options": [
+    "10pt"
+  ],
+  "engine": "pdflatex",
+  "bibliography": "bibtex",
+  "source": "builtin",
+  "version": "1.0.0",
+  "files": [],
+  "packages": [
+    "graphicx",
+    "natbib"
+  ],
+  "validated": true,
+  "warnings": [
+    "Importe o template oficial Nature via ZIP para classes/sty proprietários."
+  ]
+}

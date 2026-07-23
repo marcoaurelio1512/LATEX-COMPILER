@@ -19,53 +19,8 @@ from app.services.folder_picker import (
 )
 from app.services.main_detection import detect_main
 from app.services.project_config import load_project_config, save_project_config
-
-
-ARTICLE_TEMPLATE = r"""\documentclass[11pt,a4paper]{article}
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage[brazilian]{babel}
-\usepackage{hyperref}
-
-\title{Artigo de exemplo}
-\author{LaTeX Studio Local}
-\date{\today}
-
-\begin{document}
-\maketitle
-
-\section{Introdução}
-Este é um artigo de exemplo gerado localmente.
-
-\section{Conclusão}
-Compilação bem-sucedida.
-
-\end{document}
-"""
-
-BOOK_TEMPLATE = r"""\documentclass[11pt,a4paper]{book}
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage[brazilian]{babel}
-
-\title{Livro de exemplo}
-\author{LaTeX Studio Local}
-\date{\today}
-
-\begin{document}
-\frontmatter
-\maketitle
-\tableofcontents
-
-\mainmatter
-\chapter{Introdução}
-Conteúdo do capítulo.
-
-\chapter{Conclusão}
-Fim do livro.
-
-\end{document}
-"""
+from app.services.project_templates import scaffold_project
+from app.publication.generator import generate_publication_project
 
 
 def _to_summary(project: Project) -> ProjectSummary:
@@ -93,6 +48,8 @@ def _to_detail(
     if main and main != config.main_file:
         config.main_file = main
         save_project_config(root, config)
+    if main and project.main_file != main:
+        project.main_file = main
     return ProjectDetail(
         **_to_summary(project).model_dump(),
         config=config,
@@ -103,7 +60,17 @@ def _to_detail(
 
 def list_projects(session: Session) -> List[ProjectSummary]:
     rows = session.exec(select(Project).order_by(Project.last_opened_at.desc())).all()
-    return [_to_summary(p) for p in rows]
+    keep: List[ProjectSummary] = []
+    for p in rows:
+        root = Path(p.root_path)
+        if not root.exists() or not root.is_dir():
+            # pasta sumiu do disco — remove da lista de recentes
+            session.delete(p)
+            continue
+        keep.append(_to_summary(p))
+    if len(keep) != len(rows):
+        session.commit()
+    return keep
 
 
 def get_project(session: Session, project_id: str) -> Project:
@@ -177,7 +144,9 @@ def open_project(
     elif use_native_picker:
         selected = pick_folder_native()
         if not selected:
-            raise FolderPickerError("Seleção de pasta cancelada")
+            raise FolderPickerError(
+                "Seleção de pasta cancelada. Escolha a pasta no Finder (pode estar atrás do navegador) ou informe o caminho."
+            )
         path = selected
     if not path:
         raise FolderPickerError(
@@ -209,13 +178,15 @@ def create_project(
     session: Session,
     name: str,
     parent_path: Optional[str] = None,
-    template: str = "article",
+    template: str = "book",
     use_native_picker: bool = False,
 ) -> ProjectDetail:
     if use_native_picker or not parent_path:
         selected = pick_folder_native("Selecione a pasta pai do novo projeto")
         if not selected:
-            raise FolderPickerError("Seleção de pasta cancelada")
+            raise FolderPickerError(
+                "Seleção de pasta cancelada. Escolha a pasta no Finder (pode estar atrás do navegador) ou informe o caminho."
+            )
         parent_path = selected
     parent = validate_project_root(parent_path)
     safe_name = "".join(c for c in name.strip() if c.isalnum() or c in " -_").strip()
@@ -226,24 +197,22 @@ def create_project(
         raise FileExistsError(f"Já existe: {root}")
     root.mkdir(parents=True, exist_ok=False)
 
-    if template == "article":
-        (root / "main.tex").write_text(ARTICLE_TEMPLATE, encoding="utf-8")
-    elif template == "book":
-        (root / "main.tex").write_text(BOOK_TEMPLATE, encoding="utf-8")
-        (root / "capitulos").mkdir()
-    else:
-        (root / "main.tex").write_text(
-            "\\documentclass{article}\n\\begin{document}\nOlá\\end{document}\n",
-            encoding="utf-8",
+    # Novo fluxo de publicação: book/article usam gerador com content/ + templates/
+    if template in {"book", "article"}:
+        ptype = "book" if template == "book" else "paper"
+        tid = "book-default" if template == "book" else "paper-article"
+        generate_publication_project(
+            root, name=safe_name, project_type=ptype, template_id=tid  # type: ignore[arg-type]
         )
-
-    config = ProjectConfig(
-        main_file="main.tex",
-        engine=settings.default_engine,  # type: ignore[arg-type]
-        compiler_mode=settings.default_compiler_mode,  # type: ignore[arg-type]
-        auto_compile=settings.default_auto_compile,
-    )
-    save_project_config(root, config)
+    else:
+        scaffold_project(root, template, safe_name)
+        config = ProjectConfig(
+            main_file="main.tex",
+            engine=settings.default_engine,  # type: ignore[arg-type]
+            compiler_mode=settings.default_compiler_mode,  # type: ignore[arg-type]
+            auto_compile=settings.default_auto_compile,
+        )
+        save_project_config(root, config)
     project = _upsert_project(session, root, name=safe_name)
     return _to_detail(project, root)
 
