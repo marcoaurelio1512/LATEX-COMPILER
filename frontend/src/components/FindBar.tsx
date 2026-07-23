@@ -131,7 +131,7 @@ export function FindBar({
   };
 
   return (
-    <div className="border-b border-zinc-800 bg-zinc-900/95">
+    <div className="relative z-[90] border-b border-zinc-800 bg-zinc-900/95">
       <form
         onSubmit={onSubmit}
         className="flex flex-wrap items-center gap-2 px-3 py-2"

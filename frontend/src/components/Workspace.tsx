@@ -98,6 +98,7 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
   const [bibModal, setBibModal] = useState<null | "md" | "bib">(null);
   const [convertingBib, setConvertingBib] = useState(false);
   const [compileOverlay, setCompileOverlay] = useState(false);
+  const [editorFull, setEditorFull] = useState(false);
   const editorFindRef = useRef<EditorFindHandle | null>(null);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -930,6 +931,18 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
     return () => window.removeEventListener("keydown", handler);
   }, [projectId, config]);
 
+  useEffect(() => {
+    if (!editorFull) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setEditorFull(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editorFull]);
+
   if (!project || !config) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-400">
@@ -1008,6 +1021,7 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
           {info}
         </div>
       )}
+      {!editorFull && (
       <FindBar
         open={showFind}
         projectId={projectId}
@@ -1031,6 +1045,7 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
           });
         }}
       />
+      )}
       <div className="flex min-h-0 flex-1">
         <FileTree
           tree={tree}
@@ -1104,34 +1119,154 @@ export function Workspace({ projectId, initialFile = null, onClose }: Props) {
             void api.rename(projectId, path, next).then(() => refreshTree());
           }}
         />
-        <EditorPane
-          ref={editorFindRef}
-          tabs={tabs}
-          activePath={activePath}
-          theme={theme}
-          fontSize={fontSize}
-          wordWrap={wordWrap}
-          diagnostics={diagnostics}
-          reveal={reveal}
-          onRequestFind={() => setShowFind(true)}
-          onSelectTab={setActivePath}
-          onCloseTab={(path) => {
-            const tab = tabs.find((t) => t.path === path);
-            if (tab?.dirty) {
-              if (!window.confirm("Há alterações não salvas. Fechar mesmo assim?")) {
-                return;
+        <div
+          className={
+            editorFull
+              ? "fixed inset-0 z-[80] flex flex-col bg-zinc-950 p-0 shadow-2xl"
+              : "flex min-h-0 min-w-0 flex-1 flex-col"
+          }
+        >
+          {editorFull && (
+            <div className="flex flex-wrap items-center gap-1.5 border-b border-zinc-800 bg-zinc-900 px-3 py-2">
+              <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                Edição
+              </span>
+              <button
+                type="button"
+                onClick={() => void saveAll()}
+                className="rounded bg-zinc-800 px-3 py-1.5 text-xs hover:bg-zinc-700"
+                title="Salvar (⌘S)"
+              >
+                Salvar{dirtyPaths.size > 0 ? " •" : ""}
+              </button>
+              {activePath && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void saveActiveAs()}
+                    className="rounded border border-zinc-700 px-3 py-1.5 text-xs hover:border-sky-500"
+                  >
+                    Salvar como…
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadActive()}
+                    className="rounded border border-zinc-700 px-3 py-1.5 text-xs hover:border-sky-500"
+                  >
+                    Baixar
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowFind(true)}
+                className={`rounded px-3 py-1.5 text-xs font-medium ${
+                  showFind
+                    ? "bg-sky-600 text-white"
+                    : "border border-zinc-700 text-zinc-200 hover:border-sky-500"
+                }`}
+              >
+                Procurar
+              </button>
+              <button
+                type="button"
+                onClick={() => setInsertMode("figure")}
+                disabled={!activePath?.toLowerCase().endsWith(".tex")}
+                className="rounded border border-emerald-500/50 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Inserir Figura
+              </button>
+              <button
+                type="button"
+                onClick={() => setInsertMode("cite")}
+                disabled={!activePath?.toLowerCase().endsWith(".tex")}
+                className="rounded border border-sky-500/50 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-100 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Inserir Citação
+              </button>
+              <button
+                type="button"
+                onClick={() => void doCompile(false)}
+                disabled={compiling}
+                className="rounded bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+              >
+                Compilar
+              </button>
+              <div className="ml-auto flex items-center gap-1.5">
+                <span className="hidden max-w-[240px] truncate text-[11px] text-zinc-500 sm:inline">
+                  {activePath ?? "Nenhum arquivo"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setEditorFull(false)}
+                  className="rounded border border-zinc-700 px-3 py-1.5 text-xs hover:border-sky-500"
+                  title="Voltar ao layout (Esc)"
+                >
+                  Sair da tela cheia
+                </button>
+              </div>
+            </div>
+          )}
+          {editorFull && (
+            <FindBar
+              open={showFind}
+              projectId={projectId}
+              activePath={activePath}
+              activeContent={
+                tabs.find((t) => t.path === activePath)?.content ?? null
               }
+              onClose={() => setShowFind(false)}
+              onFindInEditor={(query, options) =>
+                editorFindRef.current?.find(query, options) ?? null
+              }
+              onClearFind={() => editorFindRef.current?.clearFind()}
+              onJump={(path, line, column) => {
+                void openFile(path).then(() => {
+                  setReveal({
+                    path,
+                    line,
+                    column: column ?? 1,
+                    nonce: Date.now(),
+                  });
+                });
+              }}
+            />
+          )}
+          <EditorPane
+            ref={editorFindRef}
+            tabs={tabs}
+            activePath={activePath}
+            theme={theme}
+            fontSize={fontSize}
+            wordWrap={wordWrap}
+            diagnostics={diagnostics}
+            reveal={reveal}
+            expanded={editorFull}
+            onToggleExpand={
+              editorFull
+                ? undefined
+                : () => setEditorFull(true)
             }
-            setTabs((prev) => prev.filter((t) => t.path !== path));
-            if (activePath === path) {
-              setActivePath(
-                tabs.filter((t) => t.path !== path).at(-1)?.path ?? null,
-              );
-            }
-          }}
-          onChange={onChange}
-          onSave={() => void saveAll()}
-        />
+            onRequestFind={() => setShowFind(true)}
+            onSelectTab={setActivePath}
+            onCloseTab={(path) => {
+              const tab = tabs.find((t) => t.path === path);
+              if (tab?.dirty) {
+                if (!window.confirm("Há alterações não salvas. Fechar mesmo assim?")) {
+                  return;
+                }
+              }
+              setTabs((prev) => prev.filter((t) => t.path !== path));
+              if (activePath === path) {
+                setActivePath(
+                  tabs.filter((t) => t.path !== path).at(-1)?.path ?? null,
+                );
+              }
+            }}
+            onChange={onChange}
+            onSave={() => void saveAll()}
+          />
+        </div>
         <PdfPreview
           projectId={projectId}
           pdfVersion={pdfVersion}

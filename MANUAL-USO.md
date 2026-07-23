@@ -160,6 +160,8 @@ Regra de ouro:
 
 ## 6. A tela de trabalho
 
+No editor, o botão **Editor Full** (ao lado das abas) amplia `.tex`/`.md` em tela cheia; **Layout normal** ou **Esc** volta ao layout.
+
 ```text
 ┌─────────────┬──────────────────────┬─────────────────┐
 │  ARQUIVOS   │      EDITOR          │   PREVIEW PDF   │

@@ -264,10 +264,12 @@ Para **excluir** um arquivo ou pasta (inclusive na raiz do livro/tese):
 Pastas são removidas com todo o conteúdo. A pasta raiz do projeto (o próprio livro) **não** pode ser apagada por aqui — use o Finder se quiser remover o projeto inteiro.
 
 ### Coluna do meio — Editor
-Onde você escreve/edita o LaTeX.  
+Onde você escreve/edita o LaTeX (ou Markdown).  
 Parece um bloco de notas com números de linha.
 
 Bolinha ou ponto no nome da aba = arquivo **ainda não salvo**.
+
+**Editor Full** (botão à direita das abas): amplia o editor para **tela cheia**, como o Visualizar Full do PDF. Na tela cheia permanecem **Salvar**, **Salvar como…**, **Baixar**, **Procurar**, **Inserir Figura/Citação** e **Compilar**. **Sair da tela cheia** ou **Esc** volta ao layout de 3 colunas.
 
 ### Inserir figura ou citação (no .tex)
 

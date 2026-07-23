@@ -41,6 +41,8 @@ interface Props {
     nonce: number;
   } | null;
   onRequestFind?: () => void;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 const LATEX_KEYWORDS = [
@@ -377,14 +379,24 @@ export const EditorPane = forwardRef<EditorFindHandle, Props>(
       editorRef.current.focus();
     }, [props.reveal, props.activePath]);
 
+    useEffect(() => {
+      // Monaco precisa recalcular altura ao entrar/sair do modo Full
+      const id = window.setTimeout(() => {
+        editorRef.current?.layout();
+        window.dispatchEvent(new Event("resize"));
+      }, 50);
+      return () => window.clearTimeout(id);
+    }, [props.expanded]);
+
     const uniqueTabs = props.tabs.filter(
       (tab, index, arr) => arr.findIndex((t) => t.path === tab.path) === index,
     );
     const tabs = uniqueTabs;
 
     return (
-      <div className="flex min-w-0 flex-1 flex-col bg-zinc-950">
-        <div className="flex gap-1 overflow-x-auto border-b border-zinc-800 bg-zinc-900 px-1">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-zinc-950">
+        <div className="flex items-center gap-1 border-b border-zinc-800 bg-zinc-900 px-1">
+          <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
           {tabs.map((tab, index) => (
             <div
               key={`${tab.path}#${index}`}
@@ -407,6 +419,21 @@ export const EditorPane = forwardRef<EditorFindHandle, Props>(
               </button>
             </div>
           ))}
+          </div>
+          {props.onToggleExpand && (
+            <button
+              type="button"
+              onClick={props.onToggleExpand}
+              className="ml-1 shrink-0 rounded border border-zinc-700 px-2 py-1 text-[11px] text-zinc-200 hover:border-sky-500"
+              title={
+                props.expanded
+                  ? "Voltar ao layout normal (Esc)"
+                  : "Expandir editor (.tex/.md) em tela cheia"
+              }
+            >
+              {props.expanded ? "Sair da tela cheia" : "Editor Full"}
+            </button>
+          )}
         </div>
         <div className="min-h-0 flex-1">
           {active ? (
